@@ -1,0 +1,64 @@
+# React Context API
+
+### 1. 개요
+
+- 데이터를 전역적으로 공유할 수 있는 방법을 제공하기 위함. 이를 통해 중첩된 컴포넌트 사이에서 props를 일일이 전달하지 않고도 데이터를 공유할 수 있음.
+
+### 2. 사용법
+
+```react
+//CounterProvider.jsx
+
+import { createContext, useState } from 'react';
+
+const CounterContext = createContext(inital);
+
+function CounterProvider({ children }) {
+  const counterState = useState(1);
+  return (
+    <CounterContext.Provider value={counterState}>
+      {children}
+    </CounterContext.Provider>
+  );
+}
+
+export default CounterProvider;
+
+```
+
+```react
+// App.js
+import React from 'react';
+import { CounterProvider } from './path/to/CounterProvider';
+import ChildComponent from './path/to/ChildComponent';
+
+function App() {
+  return (
+    <CounterProvider>
+      <ChildComponent />
+      {/* 여기에 다른 컴포넌트들을 추가할 수 있습니다 */}
+    </CounterProvider>
+  );
+}
+
+export default App;
+```
+
+
+
+1. `const CounterContext = createContext();`: 전역적으로 사용가능한 박스를 하나 생성
+2. `return <CounterContext.Provider value={counterState}>` : CounterProvider 컴포넌트가 CounterContext.Provider라는 구문을 통해 `value`가 담긴 박스(CounterContext)를 하위의 { childern }에게 제공.
+3. 정리하면, `CounterContext ` 자체는 전역적으로 사용 가능하지만, 그것이 제공하는 실제 값은 `CounterProvider`에 의해 제공되는 범위 내에서만 접근할 수 있음. **Provider로 감싸져 있지 않은 컴포넌트에서 context에 접근하면 기본 값(inital)만 사용됨**
+4. 다른 하위 컴포넌트에서 context를 사용하려면 `useContext(CounterContext)`를 사용해서 직접 박스에 접근하면 됨
+
+### 3. {children} 매개변수에 대한 이해
+
+- JSX에서 `<CounterProvider>` 태그 사이에 위치한 모든 것들이 `children` prop으로 전달됨. 
+- `function CounterProvider({ children }) {}` 
+  -  여기서 { children }의 중괄호는 JavaScript의 비구조화 할당(destructuring assignment) 문법임. 
+  - `{children}`의 비구조화 할당은, `props` 객체에서 `children` 속성을 직접 추출하여 사용하겠다는 의미. 이를 사용하면, `props.children`이라고 쓰는 대신에 `children`이라고만 써서 해당 속성을 사용할 수 있습니다.
+
+- `<CounterContext.Provider value={counterState}>
+        {children}
+      </CounterContext.Provider>`
+  - 여기서 { children }의 중괄호는 prop받은 children 변수를 html 문법에서 변수로서 사용하겠다는 의미임.
