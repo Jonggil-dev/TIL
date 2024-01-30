@@ -125,3 +125,19 @@
    - 반대로, `usersApiCall`이 이벤트 핸들러, 콜백 함수, 다른 일반 함수 내에서 호출된다면, 이는 일반 함수로 간주됩니다. 이 경우 `usersApiCall` 내부에서 React 훅을 사용하는 것은 허용되지 않으며, 이를 시도할 경우 React는 런타임 에러를 발생시킬 것입니다.
 
 <hr/>
+
+### 3. React Hook 종류
+
+ (1) useMemo
+
+```jsx
+const value = useMemo(
+  () => ({
+    refreshToken,
+  }),
+  [accessToken]
+);
+```
+
+- **메모이제이션 대상**: 콜백 함수의 반환값 (`{ refreshToken }`)
+- **메모이제이션 재계산 조건**: 의존성 배열 (`[accessToken]`)
