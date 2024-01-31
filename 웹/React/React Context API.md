@@ -78,3 +78,30 @@ export default App;
   `localStorage`만 사용하는 경우, 상태의 변경을 실시간으로 감지하는 것은 자동으로 이루어지지 않습니다. `localStorage`는 단순히 키-값 기반의 저장소로, 데이터가 변경될 때 이를 자동으로 감지하거나 리스너를 제공하지 않습니다. 따라서 상태가 변경될 때마다 명시적으로 `localStorage`를 업데이트하는 코드를 작성해야 합니다.
 
   결론적으로, `Context`와 `localStorage`를 함께 사용하면, React 컴포넌트 간의 효율적인 상태 공유와 더불어 사용자 세션 간에 이 상태를 영구적으로 저장할 수 있는 이점을 얻을 수 있습니다. 이는 특히 사용자 인증 상태, 테마 설정, 사용자 선호도 등을 관리할 때 매우 유용합니다.
+
+
+
+### 5. 컴포넌트 재랜더링
+
+- **react에서는 기본적으로 상위 컴포넌트들이 재랜더링 되면 모든 하위 컴포넌트들도 재랜더링됨**
+  - 상위 컴포넌트들의 **재랜더링을 최대한 방지하기 위해 `useMemo`, `useCallBack`과 같은 훅을 사용**하는 이유 중 하나임
+- 그래서 context를 하위 컴포넌트들에게 제공하는 `Provider`태그를 사용할 떄는 이 부분을 고려해야됨
+
+- 예시
+
+  ```jsx
+    //App.jsx
+      <AccessTokenProvider>
+        <WebSocketProvider>
+          <WebMobileLayout>
+                ...
+          </WebMobileLayout>
+        </WebSocketProvider>
+  	</AccessTokenProvider>
+  ```
+
+  - 위 코드에서 `AccessTokenProvider`에 있는 상태들이 변경이 되면 `AccessTokenProvider`가 재랜더링 됨.
+  - 이 때 `AccessTokenProvider`의 상태를 직접적으로 사용하는 하위 컴포넌트가 아니더라도 하위 컴포넌트는 재랜더링 됨. 
+  - `WebSocketProvider`나 하위 컴포넌트에 `useEffect `함수가 있는 컴포넌트들은 재랜더링 될 때마다 해당 `useEffect`가 실행되게 됨
+  - 결과적으로  `AccessTokenProvider`의 상태가 바뀌면 하위 컴포넌트에 있는 `useEffect `함수가 전부 다시 실행됨
+  - 이러한 로직을 방지하기 위해 `AccessTokenProvider`에 `useMemo`,`useCallback` 훅을 사용하여 재랜더링을 최소화 시킴
