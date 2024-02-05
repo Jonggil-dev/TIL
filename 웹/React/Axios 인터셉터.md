@@ -77,13 +77,13 @@ import { baseUrl } from "@/api/url/baseUrl";
 import { useNavigate } from "react-router-dom";
 import { useAccessTokenState } from "@/context/AccessTokenContext";
 
-export const privateAxios = axios.create({
-  baseURL: baseUrl,
-});
-
 const useAxiosConfig = () => {
   const accessToken = useAccessTokenState();
   const navigate = useNavigate();
+
+  const privateAxios = axios.create({
+    baseURL: baseUrl,
+  });
 
   privateAxios.interceptors.request.use(
     (config) => {
@@ -126,6 +126,10 @@ const useAxiosConfig = () => {
       return Promise.reject(error);
     }
   );
+  return { privateAxios };
 };
+
+export default useAxiosConfig;
+
 ```
 
