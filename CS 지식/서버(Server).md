@@ -35,7 +35,8 @@
 - 요청 : 클라이언트 -> 웹 서버 -> WAS -> DB 
 - 응답 : DB -> WAS -> 웹 서버 -> 클라이언트
 
-![image-20240227155005891](C:\Users\SSAFY\AppData\Roaming\Typora\typora-user-images\image-20240227155005891.png)
+![서버 요청,응답 사진 1](https://github.com/Jonggil-dev/TIL/assets/155353613/d35ced26-81f0-4806-9e67-e1fccc559b6b)
+
 
 <hr>
 
