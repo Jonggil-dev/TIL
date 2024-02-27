@@ -13,6 +13,23 @@
 
 - 애플리케이션을 실행하는 데 필요한 모든 파일과 설정을 포함하는 불변의 스냅샷
 - 컨테이너를 생성하는 기반이 되는 파일
+- 도커 이미지는 여러 개의 읽기 전용 레이어로 구성. 각 레이어는 이미지를 만드는 과정에서 발생한 변경 사항들을 포함. 예를 들어, 하나의 레이어에는 운영 체제가, 다른 레이어에는 애플리케이션이, 또 다른 레이어에는 애플리케이션 설정이 포함
+
+### 4. DockerFile
+
+- 텍스트 파일 형식으로, Docker 이미지를 빌드하는 데 필요한 지시사항을 포함
+
+- `docker build -t 이미지명:태그` 명령어를 통해  해당 디렉토리의 `Dockerfile`을 기본으로 인식하여 이미지를 빌드
+
+- ```txt
+  # DockerFile 코드 예시
+  
+  FROM python:3.8
+  WORKDIR /app
+  COPY . /app
+  RUN pip install -r requirements.txt
+  CMD ["python", "app.py"]
+  ```
 
 ### 4. Docker Registry
 
