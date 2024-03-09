@@ -22,3 +22,44 @@
 > 3. 빌드가 완료되어 jar 파일이 생성되고 나면 더 이상 JDK와 빌드 도구는 쓰임이 없어짐.
 > 4. 그래서 실행 스테이지 단계를 통해 애플리케이션이 실행되기 위한 최소한의 환경과 파일만 이미지에 포함시키는 작업이 진행 됨.  
 > 5.  jar파일을 실행 스테이지로 "복사"하고 애플리케이션이 실행되기 위해 꼭 필요한 JRE만 이미지에 포함시켜 jar파일과 JRE만 포함된 최종 Docker image를 생성. 
+
+
+
+### 3. 예시 코드
+
+```dockerfile
+# 빌드 스테이지
+FROM node:20.11.0 AS build
+WORKDIR /app
+COPY package*.json ./
+RUN npm install
+COPY . .
+RUN npm run build
+
+# 실행 스테이지
+FROM node:20.11.0
+# `serve` 패키지를 전역으로 설치
+RUN npm install -g serve
+# 빌드 디렉토리에서 파일 복사
+COPY --from=build /app/dist /app
+WORKDIR /app
+# 3000번 포트에서 실행
+EXPOSE 3000
+CMD ["serve", "-s", ".", "-l", "3000"]
+```
+
+### 멀티 스테이지 빌드의 내부 동작 과정
+
+1. **빌드 스테이지 (`RUN npm run build`)**: 
+   
+   - 이 단계에서는 소스 코드를 컴파일하고 빌드하여 실행 가능한 아티팩트(예: HTML, CSS, JavaScript 파일 등)를 생성합니다. `npm run build`는 애플리케이션을 빌드하는 스크립트를 실행하며, 이 과정에서 생성된 아티팩트는 `/app/dist` 디렉토리에 위치하게 됩니다.
+   - 이때, 빌드 과정에 사용되는 모든 의존성(노드 모듈), 소스 코드, 임시 파일 등도 /app 디렉토리에 위치하게 됨. 이러한 파일들은 빌드에는 필요하지만, 최종 실행 이미지에서는 필요 없는 파일들.
+     - node_modules : `npm install` 명령어 실행 후, `/app/node_modules`에 위치. 
+     -  소스코드 : `COPY . .` 명령어 수행 후 `/app` 디렉토리 안에 위치
+   
+2. **실행 스테이지 (`COPY --from=build /app/dist /app`)**:
+   
+   -  `COPY --from=build /app/dist /app` 명령어는 첫 번째 빌드 스테이지에서 생성된 `/app/dist` 디렉토리 내의 아티팩트만을 현재 스테이지(실행 스테이지)의 이미지로 복사.
+   - 이 과정에서 중요한 것은 `/app/dist` 디렉토리에 포함된 파일들만 복사한다는 점입니다. 즉, 빌드에 사용된 `node_modules` 폴더, 소스 코드 파일 등이 `/app/dist`에 없다면, 그것들은 최종 이미지로 복사되지 않습니다.
+   
+   - 따라서, 최종 이미지에는 런타임에 실제 필요한 파일들만 포함되어 있으며, 이는 이미지의 크기를 줄이고, 불필요한 의존성과 보안 위험을 최소화하는 데 기여합니다.
