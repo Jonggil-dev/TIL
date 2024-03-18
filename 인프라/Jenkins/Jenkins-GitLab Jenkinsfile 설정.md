@@ -2,7 +2,7 @@
 
 
 
-### 1. 사용할 Jenkinsfile의 경로 설정
+### 1. 사용할 Jenkinsfile의 GITLAB 경로 설정
 
 - Pipeline Item의 "Pipeline" 설정 섹션으로 이동
   - Definition : Pipeline script from SCM 선택 (대충 jenkinsfile을 별도로 작성해서 사용하겠다는 의미)
