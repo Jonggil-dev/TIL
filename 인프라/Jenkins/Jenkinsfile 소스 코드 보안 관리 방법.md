@@ -1,5 +1,27 @@
 # Jenkinsfile 소스 코드 보안 관리 방법
 
+### 0. !!!주의사항!!!!
+
+- 저장된 Credentials을 jenkinsfile에서 사용할 때 Credentials를 불러오는 경로에 공백이 있으면 해당 경로를 제대로 인식 못할 수 있음. 이 때 환경변수를 따옴표로 감싸야 공백이 포함된 경로도 정확히 인식하여 동작함
+
+  - `$properties` -> `${properties}`
+
+  - 예시
+    ```groovy
+    #이렇게 하면 properties를 가져오는 경로에 공백이 포함되어 있으면 제대로 인지를 못함
+    withCredentials([file(credentialsId: 'Spring_Env', variable: 'properties')]) {
+            sh 'cp $properties simcheonge_server/src/main/resources/application-env.properties'
+        }
+    
+    #이렇게 하면 properties를 가져오는 경로에 공백이 포함되어 있어도 인식 가능
+    withCredentials([file(credentialsId: 'Spring_Env', variable: 'properties')]) {
+            sh 'cp "${properties}" simcheonge_server/src/main/resources/application-env.properties'
+        }
+    
+    ```
+
+    
+
 ### 1. 자격 증명(Credentials) 사용
 
 - **용도**: API 키, 비밀번호, 액세스 토큰, SSH 키 등 민감한 정보를 저장하고 Jenkins 파이프라인에서 안전하게 사용할 수 있도록 합니다.

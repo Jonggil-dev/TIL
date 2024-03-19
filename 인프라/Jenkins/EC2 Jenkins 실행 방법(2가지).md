@@ -11,8 +11,12 @@ sudo ufw allow 8080/tcp
 sudo ufw reload
 sudo ufw status
 
-
-sudo docker run -d -p 8080:8080 -v /home/ubuntu/jenkins-data:/var/jenkins_home --name jenkins jenkins/jenkins:latest
+#루트 계정으로 컨테이너 실행 필요 시 아래 코드에 -u root 추가하기
+sudo docker run -d -p 8080:8080 \
+-v /home/ubuntu/jenkins-data:/var/jenkins_home \
+-v /var/run/docker.sock:/var/run/docker.sock \
+-v $(which docker):/usr/bin/docker \
+--name jenkins jenkins/jenkins:latest
 
 sudo docker logs jenkins
 
@@ -30,6 +34,8 @@ sudo docker ps -a
     - **데이터 추가**: Jenkins를 통해 생성되는 모든 설정과 데이터는 `/var/jenkins_home`에 저장됩니다. 이때, 이 디렉토리는 호스트의 `/home/ubuntu/jenkins-data`와 동기화되므로, `/var/jenkins_home`에 추가되는 모든 데이터는 자동으로 `/home/ubuntu/jenkins-data`에도 추가됩니다.
     - **데이터 지속성**: 컨테이너를 재시작하거나 삭제 후 다시 생성하더라도, `/home/ubuntu/jenkins-data`에 저장된 데이터는 유지됩니다. 새로운 컨테이너에서 동일한 볼륨 마운트 설정을 사용하면, `/var/jenkins_home`은 `/home/ubuntu/jenkins-data`의 데이터를 다시 로드하여 이전 상태를 복원합니다.
     - **결과적으로**, `/home/ubuntu/jenkins-data`와 `/var/jenkins_home` 사이에는 양방향 동기화 관계가 형성되며, 이는 데이터의 추가, 수정, 삭제 작업이 어느 한 쪽에서 발생하더라도 다른 한 쪽에도 동일하게 반영되도록 합니다. 이 메커니즘은 Jenkins 설정과 데이터의 안정성 및 지속성을 보장합니다.
+  - `-v /var/run/docker.sock:/var/run/docker.sock`, `-v $(which docker):/usr/bin/docker : Jenkins` 
+    - Jenkins 컨테이너에서 Docker 명령어를 실행할 때 필요한 두가지 옵션. 즉, Jenkinsfile에서 docker 명령어를 사용할 때 필요. 컨테이너 내부에서 실행되는 Docker 클라이언트가 호스트 시스템의 Docker 데몬과 소통할 수 있게 해주고 docker 명령어를 사용할 수 있게 해줌.
   - `--name jenkins`: 실행되는 컨테이너에 `jenkins`라는 이름을 부여
   - `jenkins/jenkins:lts`: 사용할 Docker 이미지
 
