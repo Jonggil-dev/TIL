@@ -102,3 +102,65 @@ pipeline {
 
 
 
+### 2. Flutter
+
+- **소스코드를 apk 파일로 빌드하고 특정 특정 URL로 요청이 오면 apk파일 응답하는 로직**
+
+```groovy
+pipeline {
+    agent any
+
+    stages {
+        
+         stage('Spring Env Prepare') {
+                when {
+                    expression { env.BUILD_FE == "true" }
+                }
+                steps {
+  
+                    withCredentials([file(credentialsId: 'Spring_Env', variable: 'properties')]) {
+                    script{
+                        // Jenkins가 EC2 내에서 특정 디렉토리를 수정할 수 있도록 권한 변경
+                        sh 'chmod -R 755 simcheonge_server/src/main/resources/'
+                        
+                        // Secret File Credential을 사용하여 설정 파일을 Spring 프로젝트의 resources 디렉토리로 복사
+                        sh 'cp "${properties}" simcheonge_server/src/main/resources/application-env.properties'
+                    }
+                }
+            }
+        }
+        
+        
+        stage('Build Flutter ') {
+            steps {
+                script {
+                    // Flutter 환경 변수 추가
+                    env.PATH = "${env.FLUTTER_HOME}/bin:${env.PATH}"
+                    
+                    // Flutter 종속성 가져오기
+                    sh 'flutter pub get'
+                    
+                    // APK 빌드
+                    sh 'flutter build apk'
+                }
+            }
+        }
+
+        
+        stage('Deploy Flutter') {
+            steps {
+                script {
+                    // 생성된 APK 파일을 EC2 서버에 업로드하는 스크립트 작성
+                    // 이 예제에서는 scp를 사용하나, 실제 환경에 맞게 조정해야 함
+                    sh 'scp ${APK_OUTPUT_DIR}/app-release.apk user@your-ec2-server:/path/to/apk-directory'
+                    
+                    // 필요에 따라 EC2 서버에서 APK 파일을 제공하는 서비스를 설정하거나 재시작
+                    // 예: sh 'ssh user@your-ec2-server "sudo systemctl restart your-apk-service"'
+                }
+            }
+        }
+    }
+
+}
+```
+
