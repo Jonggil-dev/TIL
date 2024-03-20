@@ -18,7 +18,6 @@ COPY src src
 RUN ./gradlew build -x test
 
 # 2단계: 실행 환경 준비
-
 FROM eclipse-temurin:17-jre-alpine
 
 WORKDIR /app

@@ -27,12 +27,48 @@ AWS EC2 인스턴스에서 Nginx를 설치하고, HTTPS를 구성하여 접속�
   ```bash
   sudo apt update
   sudo apt install nginx -y
+  
+  #nginx 상태(설치) 확인
+  sudo systemctl status nginx
   ```
 
 #### (4) HTTPS를 위한 SSL 인증서 생성
-- (도메인이 있는 경우) Let's Encrypt를 사용하여 SSL 인증서를 생성합니다. 
+- **(도메인이 있는 경우) Let's Encrypt 사용** 
 
-- (도메인이 없는 경우) 자체 서명된 인증서를 생성합니다.
+  - 인증서를 발급하는 기관이 여러개라 발급하는 방법이 여러 가지가 있음 (나는 Let's Encrypt에서 받음)
+
+  - Certbot을 이용한 letsencrypt으로 SSL 인증서 발급
+
+    - **Let's Encrypt**: SSL/TLS 인증서를 무료로 제공하는 CA입니다.
+    - **Certbot**: Let's Encrypt에서 발급한 인증서를 웹 서버에 설치하고 자동으로 갱신하는 데 사용되는 소프트웨어 도구입니다.
+    - **"letsencrypt"** : 일반적으로 Let's Encrypt 프로젝트나 관련 프로세스 및 도구를 의미하는 데 사용. Certbot을 설치하거나 Let's Encrypt 인증서를 발급하는 과정(명령어 포함)을 의미할 때 사용
+
+  - 절차
+
+    ```bash
+    #sudo apt install letsencrypt 입력해도 sudo apt install certbot 이렇게 실행됨 (공식 클라이언트 이름이 바뀜) 
+    sudo apt install certbot
+    
+    #Certbot의 Nginx 플러그인을 설치
+    sudo apt install certbot python3-certbot-nginx
+    
+    #Certbot을 실행하여 Nginx 웹 서버를 위한 SSL/TLS 인증서를 발급받고, Nginx 설정에 인증서를 자동으로 적용
+    sudo certbot --nginx
+    ```
+
+    - Certbot이 Nginx의 구성 파일에서 도메인 이름을 자동으로 찾지 못했을 경우 도메인 입력 프롬프트가 나옴
+
+      - www.example.com 같이 정확한 도메인 입력
+      - 방화벽 80포트 열려 있어야 가능함
+
+    - choose whether or not to redirect HTTP traffic to HTTPS, removing HTTP access 옵션
+
+      - Redirect로 설정 (nginx.conf에 관련 코드를 자동으로 작성해준다는거임)
+
+      
+
+
+- **(도메인이 없는 경우) 자체 서명된 인증서를 생성합니다.**
 
   - **OpenSSL 설치**: 시스템에 OpenSSL이 설치되어 있지 않은 경우, 먼저 설치합니다.
 
