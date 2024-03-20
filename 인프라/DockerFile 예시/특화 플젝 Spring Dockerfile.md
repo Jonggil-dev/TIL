@@ -25,7 +25,7 @@ WORKDIR /app
 # 1단계에서 생성된 JAR 파일 복사
 COPY --from=build /app/build/libs/*-SNAPSHOT.jar /app/app.jar
 
-EXPOSE 8888
+EXPOSE 8080
 
 # 애플리케이션 실행
 ENTRYPOINT ["java","-jar","/app/app.jar"]

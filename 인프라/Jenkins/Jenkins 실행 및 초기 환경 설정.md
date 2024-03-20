@@ -1,4 +1,4 @@
-# EC2 Jenkins실행 및 초기 환경 설정
+# Jenkins 실행 및 초기 환경 설정
 
 ### ※ Jenkins Docker 컨테이너로 실행
 
@@ -7,14 +7,14 @@
 ```bash
 cd /home/ubuntu && mkdir jenkins-data
 
-sudo ufw allow 8080/tcp
+sudo ufw allow 8090/tcp
 sudo ufw reload
 sudo ufw status
 
 #루트 계정으로 컨테이너 실행 필요 시 아래 코드에 -u root 추가하기
 #jenkins 플러터 빌드 때문에 flutter랑 android-studio 볼륨마운트도 추가함
 #추가로 빌드된 apk 파일을 EC2에 저장하기 위해서도 볼륨마운트 추가함
-sudo docker run -d -p 8080:8080 \
+sudo docker run -d -p 8090:8090 \
 -v /home/ubuntu/flutter:/var/flutter \
 -v /home/ubuntu/android-studio:/home/ubuntu/android-studio \
 -v /home/ubuntu/apk_files:/home/ubuntu/apk_files \
