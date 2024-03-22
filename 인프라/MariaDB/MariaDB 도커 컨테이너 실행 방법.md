@@ -11,15 +11,24 @@
 
 - **실행 과정**
 
+- "/var/lib/docker/volumes/mariadb_volume/_data",
+
+- my_mariadb_volume:/var/lib/mysql
+
   - **컨테이너 실행**
 
     - ````bash
-      docker run -d --name my_mariaDB -v my_mariadb_volume:/var/lib/mysql -e MYSQL_ROOT_PASSWORD=my-secret-pw -p 3306:3306 mariadb:latest
+      docker run -d --name mariadb \
+      -v mariadb_volume:/var/lib/mysql \
+      -e TZ=Asia/Seoul \
+      -e MYSQL_ROOT_PASSWORD=my-secret-pw \
+      -p 3306:3306 mariadb:latest
       ````
-
+      
       - `-d`: 컨테이너를 백그라운드 모드로 실행합니다. 즉, 터미널이 컨테이너 실행에 묶이지 않고 즉시 프롬프트로 돌아옵니다.
-      - `--name my_mariaDB`: 실행할 컨테이너에 `my_mariaDB `라는 이름을 지정합니다. 이 이름을 사용하여 컨테이너를 참조하거나 관리할 수 있습니다.
-      - `-v my_mariadb_volume:/var/lib/mysql`: `my_mariadb_volume`이라는 볼륨을 생성하거나 사용하여 컨테이너의 `/var/lib/mysql` 디렉토리에 마운트함.`my_mariadb_volume` 볼륨이 없는 경우 자동으로 생성하고 마운트 합니다.`/var/lib/mysql`의 경우 MariaDB 컨테이너가 실행 될 때 내부적으로 생성됨
+      - `--name mariadb`: 실행할 컨테이너에 `mariadb`라는 이름을 지정합니다. 이 이름을 사용하여 컨테이너를 참조하거나 관리할 수 있습니다.
+      - `-v mariadb_volume:/var/lib/mysql`: `mariadb_volume`이라는 볼륨을 생성하거나 사용하여 컨테이너의 `/var/lib/mysql` 디렉토리에 마운트함.`my_mariadb_volume` 볼륨이 없는 경우 자동으로 생성하고 마운트 합니다.`/var/lib/mysql`의 경우 MariaDB 컨테이너가 실행 될 때 내부적으로 생성됨
+      - `-e TZ=Asia/Seoul` : 컨테이너의 환경 변수를 설정하는 데 사용. 환경 변수를 통해 컨테이너의 시간대(time zone)를 설정. 컨테이너의 시간대를 설정한다는 것은 컨테이너 내부에서 실행되는 모든 프로세스와 서비스의 시간대를 설정하는 것을 의미.
       - `-e MYSQL_ROOT_PASSWORD=my-secret-pw`: MariaDB 루트 계정의 비밀번호를 `my-secret-pw`로 설정합니다. 이 환경변수는 MariaDB 컨테이너를 처음 실행할 때 필수입니다. `MYSQL_ROOT_PASSWORD`이름은 환경 변수이기 때문에 환경변수 설정을 변경할 게 아니라면 이름을 바꾸면 안됨.
       - `-p 3306:3306`: 호스트의 3306 포트와 컨테이너의 3306 포트를 바인딩합니다. 이렇게 함으로써 호스트 머신의 해당 포트를 통해 MariaDB에 접근할 수 있습니다.
       - `mariadb:latest`: 사용할 이미지를 지정합니다. 여기서는 `mariadb`의 `latest` 태그를 사용하여 최신 버전의 MariaDB 이미지를 사용합니다.

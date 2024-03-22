@@ -28,7 +28,8 @@ COPY --from=build /app/build/libs/*-SNAPSHOT.jar /app/app.jar
 EXPOSE 8090
 
 # 애플리케이션 실행
-ENTRYPOINT ["java","-jar","/app/app.jar"]
+# -Duser.timezone=Asia/Seoul 옵션은 application의 시간 설정(DB Created_at 시간이 안맞아서 설정함)
+ENTRYPOINT ["java", "-Duser.timezone=Asia/Seoul", "-jar", "/myapp.jar"]
 ```
 
 - **`FROM openjdk:17-jdk-slim as build`** : 이 이미지에는 Java 17 JDK가 포함되어 있으며, 애플리케이션 빌드에 필요한 모든 JDK 도구를 제공합니다. `slim` 버전은 용량이 작아 빌드 속도가 빨라집니다.
