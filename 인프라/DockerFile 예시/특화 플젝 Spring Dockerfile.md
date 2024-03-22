@@ -28,8 +28,8 @@ COPY --from=build /app/build/libs/*-SNAPSHOT.jar /app/app.jar
 EXPOSE 8090
 
 # 애플리케이션 실행
-# -Duser.timezone=Asia/Seoul 옵션은 application의 시간 설정(DB Created_at 시간이 안맞아서 설정함)
-ENTRYPOINT ["java", "-Duser.timezone=Asia/Seoul", "-jar", "/myapp.jar"]
+# 애플리케이션의 시간 설정 = "-Duser.timezone=Asia/Seoul" (DB Created_at 시간이 영국시간으로 보여 설정 함)
+ENTRYPOINT ["java", "-Duser.timezone=Asia/Seoul", "-Dspring.profiles.active=prod", "-jar", "/app/app.jar"]
 ```
 
 - **`FROM openjdk:17-jdk-slim as build`** : 이 이미지에는 Java 17 JDK가 포함되어 있으며, 애플리케이션 빌드에 필요한 모든 JDK 도구를 제공합니다. `slim` 버전은 용량이 작아 빌드 속도가 빨라집니다.
@@ -45,3 +45,7 @@ ENTRYPOINT ["java", "-Duser.timezone=Asia/Seoul", "-jar", "/myapp.jar"]
   - /app/build/libs/*-SNAPSHOT.jar 파일을 /app/app.jar로 복사
   - gradle 특정 버전 이상에서는 빌드 시 jar 파일이 2개 이상 나옴으로 *-SNAPSHOT.jar 파일을 복사해야 됨
   - 처음에 **`COPY --from=build /app/build/libs/*.jar /app/app.jar`** 이렇게 햇는데 jar파일이 2개 이상이라 빌드 시 자꾸 에러 떳음
+
+- **ENTRYPOINT ["java", "-Duser.timezone=Asia/Seoul", "-Dspring.profiles.active=prod", "-jar", "/app/app.jar"]**
+  - `-Duser.timezone=Asia/Seoul`: 애플리케이션의 시간 설정. 한국 시간으로 맞춰 나야 created_at과 같은 시간이 정상 반영 됨(EC2, 도커 컨테이너,DB 시간, 애플리케이션 중 하나라도 Asia/Seoul로 안 맞으면 시간 설정 제대로 안먹힐 확률이 있음)
+  - `-Dspring.profiles.active=prod`: spring 애플리케이션 Runtime 시에 application.properties에 작성된 환경 변수 값들에 대한 주입을 application-prod.properties 파일을 사용하겠다는 의미
