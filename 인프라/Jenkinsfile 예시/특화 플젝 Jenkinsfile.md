@@ -1,7 +1,5 @@
 # Jenkinsfile 작성
 
-### 0. 통합본
-
 ```groovy
 pipeline {
     agent any
@@ -24,7 +22,7 @@ pipeline {
                 // 마지막 성공한 빌드 이후 변경된 파일 목록을 가져옴
                 def changedFiles = sh(script: "git diff --name-only HEAD \$(git rev-parse HEAD~1)", returnStdout: true).trim()
 
-                // 변경된 파일이 백엔드 디렉토리 내에 있는지 확인
+                // // 변경된 파일이 백엔드 디렉토리 내에 있는지 확인
                 env.BUILD_FE = changedFiles.contains("simcheonge_front/") ? "true" : "false"
                 // // 변경된 파일이 프론트엔드 디렉토리 내에 있는지 확인
                 env.BUILD_BE = changedFiles.contains("simcheonge_server/") ? "true" : "false"
@@ -41,14 +39,19 @@ pipeline {
                 }
                 steps {
   
-                    withCredentials([file(credentialsId: 'Spring_Env', variable: 'properties')]) {
+                    withCredentials([
+                        file(credentialsId: 'Spring_Prod', variable: 'PROD_PROPERTIES'),
+                        file(credentialsId: 'Spring_Secret', variable: 'SECRET_PROPERTIES')
+                        ]) {
 
                     script{
                         // Jenkins가 EC2 내에서 특정 디렉토리를 수정할 수 있도록 권한 변경
                         sh 'chmod -R 755 simcheonge_server/src/main/resources/'
 
                         // Secret File Credential을 사용하여 설정 파일을 Spring 프로젝트의 resources 디렉토리로 복사
-                        sh 'cp "${properties}" simcheonge_server/src/main/resources/application-prod.properties'
+                        sh 'cp "${PROD_PROPERTIES}" simcheonge_server/src/main/resources/application-prod.properties'
+                        sh 'cp "${SECRET_PROPERTIES}" simcheonge_server/src/main/resources/application-secret.properties'
+
                     }
                 }   
             }
