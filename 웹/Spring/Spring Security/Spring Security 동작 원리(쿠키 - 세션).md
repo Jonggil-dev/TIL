@@ -31,8 +31,8 @@
 
 
 ### ✔전체 동작 원리 (인증 관련 아키텍쳐)
+![전체 동작 원리](https://github.com/Jonggil-dev/TIL/assets/155353613/8fc7b262-f51d-4e6e-93cc-a8f9d16abaeb)
 
-### 
 
 ### 📄 로그인 절차 상세 설명
 
@@ -171,6 +171,7 @@
 - `UserDetails`
   : 사용자의 정보를 담는 인터페이스
   - 아래는 UserDetails를 상속받은 CustomUserDetails 사용시 필수로 구현 해야 하는 메서드
+![userDetail 메서드](https://github.com/Jonggil-dev/TIL/assets/155353613/1cca7b89-a4c2-43f0-9e6a-06a2efc2569f)
 
 
 
