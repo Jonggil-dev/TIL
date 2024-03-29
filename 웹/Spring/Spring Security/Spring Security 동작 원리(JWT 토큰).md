@@ -1,10 +1,33 @@
 # Spring Security 동작 원리(JWT 토큰)
 
+### !!필독!!
+
 - 로그인 인증 과정에서 사용자의 인증 절차까지는 기본적으로 쿠키-세션의 절차와 동일함
+
 - 차이는 로그인 인증이 성공적으로 완료되었을 때 세션을 생성하느냐 JWT 토큰을 생성하느냐의 차이임
+
 - 로그인 이후 인증 처리 과정은 차이가 있음 
 
-## 출처 
+- **이 파일의 동작 과정들은 Spring Security에서 제공하는 로그인 기능 URL로 요청이 갔을 때 일어나는 동작 과정을 설명한 거임**
+
+- **프로젝트에서 구현한 방법**
+
+  - 내가 프로젝트에서 구현한 jwt 토큰 로그인/인증의 경우는 Spring Security에서 제공하는 Login 서비스(Form 로그인)를 사용하지 않았음.
+  - 즉, 이 파일의 동작 과정에 따라서 인증/인가 과정이 처리 된 게 아님
+    (잘 모르는 상태로 한 거라 기본 제공하는 Form 로그인을 활용할 생각을 안했음)
+
+  - URL 요청이 Controller에 도달 했을 때 별도 구현한 Login 로직에 의해 처리됨. 이 때 Login 로직은 Spring Security에서 제공하는 인터페이스들을 이용했음. 
+  - 결국, 전체적인 과정 자체는 아래 작성한 동작 과정들과 일치하지 않음. 하지만, 부분적으로 보았을 때 사용한 인터페이스에서 일어나는 동작은 같거나 비슷하기 때문에 아래 자료 참고해서 이해하면 됨
+
+- **만약, 프로젝트에서 사용한 로그인에 Spring-Security의 filterchain을 적용하려 했다면, 아래 2가지를 구성해서 도전해볼 수 있을듯?**
+
+  - **SrpingConfig 파일의 filterChain 클래스 작성**
+    - `loginProcessingUrl("/loginUrl")` // 로그인 액션 URL 설정
+
+  - **`UsernamePasswordAuthenticationFilter`를 상속받는 커스텀 필터를 구현**
+    - 이 필터에서 JSON 데이터를 파싱하도록 `UsernamePasswordAuthenticationToken`을 생성
+
+## 🔑출처 
 
 - https://velog.io/@leeeeeyeon/Spring-Boot-Spring-Security-%EB%8F%99%EC%9E%91-%EC%9B%90%EB%A6%AC
 - https://skatpdnjs.tistory.com/41
@@ -33,6 +56,9 @@
 
 
 ### ✔전체 동작 원리 (인증 관련 아키텍쳐)
+
+**아래 사진의  AuthenticationFilter는 UsernamePasswordAuthenticationFilter을 의미**
+
 ![전체 동작 원리](https://github.com/Jonggil-dev/TIL/assets/155353613/c340f4c7-74b2-4c5a-95ec-9a0518634e7d)
 
 
@@ -42,7 +68,7 @@
 
 **2. UsernamePasswordAuthenticationToken(토큰, 인증용 객체) 생성**
 
-- `AuthenticationFilter`가 요청을 받아서 `UsernamePasswordAuthenticationToken` (인증용 객체)을 생성
+- `UsernamePasswordAuthenticationFilter(이하 AuthenticationFilter)`가 요청을 받아서 `UsernamePasswordAuthenticationToken` (인증용 객체)을 생성
 - `UsernamePasswordAuthenticationToken`는 `Authentication`타입의 객체임
 - 이 시점의 `UsernamePasswordAuthenticationToken`은 인증되지 않은 상태(즉, `authenticated` 속성이 `false`)
 
@@ -115,59 +141,50 @@
      - `AuthenticationSuccessHandler`내에서, `Authentication` 객체에서 사용자의 정보를 추출하여 JWT 토큰을 생성
      - 생성된 토큰은 HTTP 응답(보통 헤더 또는 바디 내)에 포함시켜 클라이언트에게 전송
 
-
-
-### #######################여기부터 아래는 다시 정리#############################
-
 2. **JWT AuthenticationFilter를 통한 처리**
-
    - **커스텀 필터 구현**
-     - 개발자는 `AuthenticationFilter` 후에 실행될 `JWTAuthenticationFilter(커스텀 필터)`를 구현 이 필터는 인증 과정을 직접 처리하지 않고, 대신 인증이 성공했을 때의 후속 조치를 담당
-     - `JWTAuthenticationFilter`는 직접 전달받은 `Authentication` 객체를 기반으로 JWT 토큰을 생성
+     - 개발자는 `(UsernamePassword)AuthenticationFilter` 후에 실행될 `JWTAuthenticationFilter(커스텀 필터)`를 구현. 이 필터는 인증 과정을 직접 처리하지 않고, 대신 인증이 성공했을 때의 후속 조치를 담당
+     - `JWTAuthenticationFilter`는 직접 전달 받은 `Authentication` 객체를 기반으로 JWT 토큰을 생성
      - 생성된 JWT 토큰은 응답에 포함되어 클라이언트에게 전송
-
    - **필터 체인에 JWT AuthenticationFilter 추가**
-     - Spring Security 설정에서 이 커스텀 필터를 필터 체인에 명시적으로 추가합니다. 이 필터의 위치는 `AuthenticationFilter` 이후이어야 함
-     - **근데 JWT토큰을 검증하는 과정은 `AuthenticationFilter` 내에서 수행되어야 하지 않나? 그러면 `JWT AuthenticationFilter`내에 resolveToken 코드를 작성했는데 `AuthenticationFilter` 이후에 있어도 되나?**
-
+     - Spring Security 설정에서 이 커스텀 필터를 필터 체인에 명시적으로 추가합니다. 이 필터의 위치는 `(UsernamePassword)AuthenticationFilter` 이후이어야 함
    
 
-### 📄 로그인 인증 이후의 요청 처리 과정
+### 📄 로그인 인증 이후의 요청 처리 과정 (!!!!!수정 필요!!!!!!)
 
-**1. 세션 ID의 전송**
+**1. JWT 토큰의 전송**
 
-- 클라이언트는 요청을 보낼 때 HTTP 쿠키에 저장된 세션 ID를 함께 서버에 전송
+- 클라이언트는 요청의 `Authorization` 헤더에 `Bearer {accesstoken}` 형식으로 포함시켜 서버에 전송
 
-**2. 세션 ID 검증**
+**2. JWT 토큰 검증 (커스텀 필터, JwtAuthenticationFilter)**
 
-- 서버는 해당 세션 ID를 사용하여 세션 저장소(메모리, DB, 외부 세션 관리 시스템 등)에서 사용자의 세션을 조회
-- 세션을 성공적으로 조회하면, 해당 세션에 저장된 `SecurityContext`를 가져옴
-- 이 `SecurityContext`는 앞서 로그인 성공 시 저장된 것으로, `Authentication` 객체를 포함
+- 서버는 `OncePerRequestFilter` 를 상속받는 커스텀 필터 `JwtAuthenticationFilter `요청의 `Authorization 헤더`를 검사하여 JWT 토큰을 추출
+- 이 필터는 요청이 들어올 때마다 실행되며, 토큰의 유효성을 검사
 
-**3. SecurityContextHolder 설정**
+**3. SecurityContext 설정**
 
-- 가져온 `SecurityContext`는 현재 요청을 처리하는 동안 `SecurityContextHolder`에 설정
-- 이를 통해, 현재 요청이 실행되는 동안 어디서든 `Authentication` 객체에 접근할 수 있음
+- 토큰이 유효하면, 필터는 토큰에 포함된 사용자 식별 정보를 기반으로 `Authentication` 객체(`UsernamePasswordAuthenticationToken` 또는 `JwtAuthenticationToken`)를 생성
+- **SecurityContextHolder에 인증 객체 설정**: 생성된 `Authentication` 객체는 `SecurityContextHolder`의 `SecurityContext`에 저장됩니다. 이로써, 애플리케이션의 다른 부분에서 현재 인증된 사용자의 정보에 접근할 수 있게 됩니다.
 
-**4. 사용자 인증 여부 확인**
+4. 사용자 인증 여부 확인
 
-- 서버는 세션 저장소에서 가져온 `SecurityContext`의  `Authentication 객체`를 기반으로 현재 요청이 인증된 사용자에 의해 이루어졌는지 확인함
-- 이 과정에서 추가적인 로그인 절차 없이도 사용자의 인증 상태를 확인할 수 있음
+- **인증 상태 접근**: 애플리케이션 내에서 현재 요청을 처리하는 컴포넌트(예: 컨트롤러, 서비스)는 `SecurityContextHolder`를 통해 인증된 사용자의 정보(`Authentication` 객체)에 접근할 수 있습니다. 이 정보를 바탕으로 사용자의 인증 상태를 확인할 수 있습니다.
 
-**5. 요청에 대한 접근 권한 검사**
+### 5. 요청에 대한 접근 권한 검사
 
-- 사용자의 인증이 되면, `SecurityContext`에 저장된 인증 정보(`Authentication` 객체)를 기반으로 현재 요청이 접근하려는 리소스에 대한 접근 권한이 있는지 확인
-- 이 과정에서 `@PreAuthorize`, `@Secured` 어노테이션 또는 XML 기반의 접근 정책 등을 사용하여 세부적인 접근 제어를 설정할 수 있음
+- **접근 권한 검사**: 인증된 사용자의 권한을 확인하여, 현재 요청이 접근하려는 리소스나 작업에 대한 접근 권한이 있는지 검사합니다. 이는 `@PreAuthorize`, `@Secured` 어노테이션, 메소드 시큐리티, URL 기반 시큐리티 등 다양한 방식으로 구현될 수 있습니다.
 
-**6. 요청 처리**
+### 6. 요청 처리
 
-- 접근 권한이 확인되면, 실제 요청을 처리
-- 만약 사용자가 요구하는 리소스에 대한 접근 권한이 없는 경우, Spring Security는 접근 거부 응답(예: HTTP 403 Forbidden)을 클라이언트에게 전송
+- **리소스 접근**: 사용자가 요청한 리소스에 대한 접근 권한이 확인되면, 서버는 요청을 처리하고 필요한 데이터나 서비스를 제공합니다.
+- **접근 거부 처리**: 사용자가 접근 권한이 없는 리소스에 대한 요청을 한 경우, Spring Security는 접근 거부 응답(예: HTTP 403 Forbidden)을 자동으로 처리하고 반환합니다.
+
+
 
 ### 🚡 객체별 역할 요약
 
-- `AuthenticationFilter`
-
+- `(UsernamePassword)AuthenticationFilter`
+  : 정식 명칭은 `UsernamePasswordAuthenticationFilter` .
   : 인증되지 않은 사용자와 인증된 사용자의 요청을 감시하고, `AuthenticationManager`에게 인증 처리를 맡김
 
   - 인증 성공 → 인증용 객체를 `AuthenticationContext`에 저장 후 `AuthenticationSuccessHandler` 실행
@@ -191,7 +208,7 @@
   : 사용자의 정보를 담는 인터페이스
 
   - 아래는 UserDetails를 상속받은 CustomUserDetails 사용시 필수로 구현 해야 하는 메서드
-![userDetail 메서드](https://github.com/Jonggil-dev/TIL/assets/155353613/6f6059b8-30c0-41ae-974b-1241c7e32494)
+  ![userDetail 메서드](https://github.com/Jonggil-dev/TIL/assets/155353613/6f6059b8-30c0-41ae-974b-1241c7e32494)
 
 
 

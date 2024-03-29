@@ -149,8 +149,8 @@
 
 ### 🚡 객체별 역할 요약
 
-- `AuthenticationFilter`
-
+- `(UsernamePassword)AuthenticationFilter`
+: 정식 명칭은 `UsernamePasswordAuthenticationFilter`
   : 인증되지 않은 사용자와 인증된 사용자의 요청을 감시하고, `AuthenticationManager`에게 인증 처리를 맡김
 
   - 인증 성공 → 인증용 객체를 `AuthenticationContext`에 저장 후 `AuthenticationSuccessHandler` 실행
@@ -171,7 +171,7 @@
 - `UserDetails`
   : 사용자의 정보를 담는 인터페이스
   - 아래는 UserDetails를 상속받은 CustomUserDetails 사용시 필수로 구현 해야 하는 메서드
-![userDetail 메서드](https://github.com/Jonggil-dev/TIL/assets/155353613/1cca7b89-a4c2-43f0-9e6a-06a2efc2569f)
+  ![userDetail 메서드](https://github.com/Jonggil-dev/TIL/assets/155353613/1cca7b89-a4c2-43f0-9e6a-06a2efc2569f)
 
 
 
