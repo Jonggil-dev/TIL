@@ -123,7 +123,7 @@
 
 **2. 세션 ID 검증**
 
-- 서버는 해당 세션 ID를 사용하여 세션 저장소(메모리, DB, 외부 세션 관리 시스템 등)에서 사용자의 세션을 조회
+- `SessionManagementFilter`는 해당 세션 ID를 추출하고 세션 저장소(메모리, DB, 외부 세션 관리 시스템 등)에서 사용자의 세션을 조회
 - 세션을 성공적으로 조회하면, 해당 세션에 저장된 `SecurityContext`를 가져옴
 - 이 `SecurityContext`는 앞서 로그인 성공 시 저장된 것으로, `Authentication` 객체를 포함
 
