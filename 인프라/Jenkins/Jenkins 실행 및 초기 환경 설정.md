@@ -14,12 +14,14 @@ sudo ufw status
 #루트 계정으로 컨테이너 실행 필요 시 아래 코드에 -u root 추가하기
 #jenkins 플러터 빌드 때문에 flutter랑 android-studio 볼륨마운트도 추가함
 #추가로 빌드된 apk 파일을 EC2에 저장하기 위해서도 볼륨마운트 추가함
+#추가로 빌드된 React Build 폴더를 EC2에 저장하기 위해서도 볼륨마운트 추가함
 sudo docker run -d -p 8080:8080 \
 -v /home/ubuntu/flutter:/var/flutter \
 -v /home/ubuntu/android-studio:/home/ubuntu/android-studio \
 -v /home/ubuntu/apk_files:/home/ubuntu/apk_files \
 -v /home/ubuntu/jenkins-data:/var/jenkins_home \
 -v /var/run/docker.sock:/var/run/docker.sock \
+-v /var/www/react:/var/www/react \
 -v $(which docker):/usr/bin/docker \
 --name jenkins jenkins/jenkins:latest
 
