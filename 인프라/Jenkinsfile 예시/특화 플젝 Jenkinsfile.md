@@ -165,10 +165,10 @@ pipeline {
 
                     script{
                         // Jenkins가 EC2 내에서 특정 디렉토리를 수정할 수 있도록 권한 변경
-                        sh 'chmod -R 755 simcheonge_admin/src/'
+                        sh 'chmod -R 755 simcheonge_admin/'
 
                         // Secret File Credential을 사용하여 설정 파일을 React 프로젝트의 simcheonge_admin 디렉토리로 복사
-                        sh 'cp "${ENV_CONFIG}" simcheonge_admin/src/env.config'
+                        sh 'cp "${ENV_CONFIG}" simcheonge_admin/.env'
                     }
                 }   
             }
@@ -213,5 +213,4 @@ pipeline {
         }
     }
 }
-
 ```

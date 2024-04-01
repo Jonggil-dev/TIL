@@ -1,30 +1,10 @@
 # 특화 플젝 Nginx 설정 예시
 
 ```nginx
-  GNU nano 4.8                                                                                                                                                                                                                                                                                               /etc/nginx/sites-available/default
-### You should look at the following URL's in order to grasp a solid understanding
-# of Nginx configuration files in order to fully unleash the power of Nginx.
-# https://www.nginx.com/resources/wiki/start/
-# https://www.nginx.com/resources/wiki/start/topics/tutorials/config_pitfalls/
-# https://wiki.debian.org/Nginx/DirectoryStructure
-#
-# In most cases, administrators will remove this file from sites-enabled/ and
-# leave it as reference inside of sites-available where it will continue to be
-# updated by the nginx packaging team.
-#
-# This file will automatically load configuration files provided by other
-# applications, such as Drupal or Wordpress. These applications will be made
-# available underneath a path with that package name, such as /drupal8.
-#
-# Please see /usr/share/doc/nginx-doc/examples/ for more detailed examples.
-##
-
-# Default server configuration
-#
-
+#/etc/nginx/sites-available/defaulf 파일
 
 server {
-    if ($host = 도메인) {
+    if ($host = j10e102.p.ssafy.io) {
         return 301 https://$host$request_uri;
     } # managed by Certbot
 
@@ -32,7 +12,7 @@ server {
         listen 80 default_server;
         listen [::]:80 default_server;
 
-        server_name 도메인;
+        server_name j10e102.p.ssafy.io;
 
         return 404; # managed by Certbot
 
@@ -47,17 +27,24 @@ server {
         listen 443 ssl default_server;
         listen [::]:443 ssl default_server;
 
-        server_name 도메인; # managed by Certbot
+        server_name j10e102.p.ssafy.io; # managed by Certbot
 
         root /var/www/react/build; # react build file directory(simcheonge admin page)
 
         index index.html index.htm index.nginx-debian.html;
 
 
-        ssl_certificate /etc/letsencrypt/live/도메인/fullchain.pem; # managed by Certbot
-        ssl_certificate_key /etc/letsencrypt/live/도메인/privkey.pem; # managed by Certbot
+        ssl_certificate /etc/letsencrypt/live/j10e102.p.ssafy.io/fullchain.pem; # managed by Certbot
+        ssl_certificate_key /etc/letsencrypt/live/j10e102.p.ssafy.io/privkey.pem; # managed by Certbot
         include /etc/letsencrypt/options-ssl-nginx.conf; # managed by Certbot
         ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem; # managed by Certbot
+
+
+        location / {
+				#SPA를 사용하는 CSR의 경우 어떤 요청이든 index.html을 제공해야 하기 때문에 try_files 설정 필요
+                try_files $uri $uri/ /index.html;
+
+        }
 
 
         location /api {
@@ -83,12 +70,12 @@ server {
 
         listen 8070 ssl default_server;
 
-        server_name 도메인;
+        server_name j10e102.p.ssafy.io;
 
 
 
-        ssl_certificate /etc/letsencrypt/live/도메인/fullchain.pem; # managed by Certbot
-        ssl_certificate_key /etc/letsencrypt/live/도메인/privkey.pem; # managed by Certbot
+        ssl_certificate /etc/letsencrypt/live/j10e102.p.ssafy.io/fullchain.pem; # managed by Certbot
+        ssl_certificate_key /etc/letsencrypt/live/j10e102.p.ssafy.io/privkey.pem; # managed by Certbot
         include /etc/letsencrypt/options-ssl-nginx.conf; # managed by Certbot
         ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem; # managed by Certbot
 
@@ -104,7 +91,5 @@ server {
         }
 
 }
-
-
 ```
 
