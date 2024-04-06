@@ -4,7 +4,7 @@
 #/etc/nginx/sites-available/defaulf 파일
 
 server {
-    if ($host = j10e102.p.ssafy.io) {
+    if ($host = 도메인) {
         return 301 https://$host$request_uri;
     } # managed by Certbot
 
@@ -12,7 +12,7 @@ server {
         listen 80 default_server;
         listen [::]:80 default_server;
 
-        server_name j10e102.p.ssafy.io;
+        server_name 도메인;
 
         return 404; # managed by Certbot
 
@@ -27,15 +27,15 @@ server {
         listen 443 ssl default_server;
         listen [::]:443 ssl default_server;
 
-        server_name j10e102.p.ssafy.io; # managed by Certbot
+        server_name 도메인; # managed by Certbot
 
         root /var/www/react/build; # react build file directory(simcheonge admin page)
 
         index index.html index.htm index.nginx-debian.html;
 
 
-        ssl_certificate /etc/letsencrypt/live/j10e102.p.ssafy.io/fullchain.pem; # managed by Certbot
-        ssl_certificate_key /etc/letsencrypt/live/j10e102.p.ssafy.io/privkey.pem; # managed by Certbot
+        ssl_certificate /etc/letsencrypt/live/도메인/fullchain.pem; # managed by Certbot
+        ssl_certificate_key /etc/letsencrypt/live/도메인/privkey.pem; # managed by Certbot
         include /etc/letsencrypt/options-ssl-nginx.conf; # managed by Certbot
         ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem; # managed by Certbot
 
@@ -70,12 +70,12 @@ server {
 
         listen 8070 ssl default_server;
 
-        server_name j10e102.p.ssafy.io;
+        server_name 도메인;
 
 
 
-        ssl_certificate /etc/letsencrypt/live/j10e102.p.ssafy.io/fullchain.pem; # managed by Certbot
-        ssl_certificate_key /etc/letsencrypt/live/j10e102.p.ssafy.io/privkey.pem; # managed by Certbot
+        ssl_certificate /etc/letsencrypt/live/도메인/fullchain.pem; # managed by Certbot
+        ssl_certificate_key /etc/letsencrypt/live/도메인/privkey.pem; # managed by Certbot
         include /etc/letsencrypt/options-ssl-nginx.conf; # managed by Certbot
         ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem; # managed by Certbot
 
