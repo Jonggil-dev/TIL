@@ -1,1 +1,0 @@
-포트폴리오 링크 입니다 : https://jeongjonggil.github.io/portfolio/
