@@ -32,7 +32,7 @@ sudo docker ps -a
 ```
 
 - jenkins의 의 경우 별도로 환경 세팅을 커스텀 할 게 없으므로 jenkins 공식 이미지 사용
-- `sudo docker run -d -p 8080:8080 -v /home/ubuntu/jenkins-data:/var/jenkins_home --name jenkins jenkins/jenkins:lts`
+- `sudo docker run -d -p 8080:8080 -v /home/ubuntu/jenkins-data:/var/jenkins_home --name jenkins jenkins/jenkins:latest`
   - `-d`: 컨테이너를 백그라운드에서 실행하라는 옵션
   - `-p 8080:8080`: 호스트와 컨테이너 간의 포트 매핑을 설정
   - `-v /home/ubuntu/jenkins-data:/var/jenkins_home`: 볼륨을 사용하여 데이터 지속성을 관리하는 옵션
