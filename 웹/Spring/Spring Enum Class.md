@@ -15,79 +15,31 @@
 
 - Enum 클래스 형을 기반으로 한 클래스형 선언 
 
-### 2. 선언 방법
-
-**1) 별도의 .java 선언**
-
-- DevType.java
-
-```
-package EnumExample;
-
-public enum DevType {
-
-	MOBILE, WEB, SERVER
-}
-```
-
-- Developer.java
-
-```
-package EnumExample;
-
-public class Developer {
-	
-	public String name;
-	public int career;
-	public DevType type;
-	
-}
-```
-
-**2) Class 내부에서 선언**
-
-- Developer.java
-
-```
-package EnumExample;
-package EnumExample;
-
-public class Developer {
-	
-	public String name;
-	public int career;
-	public enum DevType {
-
-		MOBILE, WEB, SERVER
-	}
-
-}
-```
-
-**3) Class 외부에서 선언**
-
-Develoer.java
-
-```
-package EnumExample;
-
-public class Developer {
-	
-	public String name;
-	public int career;
-	public DevType type;
-
-}
-
-enum DevType {
-
-	MOBILE, WEB, SERVER
-}
-```
-
-### 3. 특징
+### 2. 특징
 
 - 열거형으로 선언된 순서에 따라 0 부터 인덱스 값을 가진다. 순차적으로 증가된다.
-- enum 열거형으로 지정된 상수들은 모두 대문자로 선언
+- enum 열거형으로 지정된 상수들은 모두 대문자로 선언 (관습임, 대문자로 안해도 에러는 안남)
 - 마지막에 열거형 변수들을 선언한 후 세미콜론(;)은 찍지 않는다.
-  (상수와 연관된 문자를 연결시킬 경우 세미콜론(;) 찍는다. 맨아래 예제 나와있음.)
+  (상수와 연관된 문자를 연결시킬 경우 세미콜론(;) 찍는다. 아래 사용예시 부분이 해당)
+
+### 3. 사용 예시
+
+```java
+@Getter
+@RequiredArgsConstructor
+public enum CommonErrorCode implements ErrorCode {
+
+    INVALID_PARAMETER(HttpStatus.BAD_REQUEST, "Invalid parameter included"),
+    RESOURCE_NOT_FOUND(HttpStatus.NOT_FOUND, "Resource not exists"),
+    INTERNAL_SERVER_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "Internal server error"),
+    ;
+
+    private final HttpStatus httpStatus;
+    private final String message;
+}
+```
+
+- 위 코드에서 `INVALID_PARAMETER`, `RESOURCE_NOT_FOUND`, `INTERNAL_SERVER_ERROR`는 상수 객체로 결국 `CommonErrorCode`의 인스턴스임
+- 그래서  `INVALID_PARAMETER`는 `CommonErrorCode` 클래스의 인스턴스 이므로 , `private final HttpStatus httpStatusk, private final String message` 두 가지 필드를 가진 객체임
+- 스프링 내부적으로 `INVALID_PARAMETER`를 생성할 때 `HttpStatus.BAD_REQUEST`, `"Invalid parameter included"`를 생성자 매개변수로 받아서 `INVALID_PARAMETER`의 `httpStatus`, `message`필드에 초기화 됨
+- 사용은`CommonErrorCode.INVALID_PARAMETER.getHttpStatus()`와 같은 방법으로 상수 객체에 초기화된 필드 호출 가능
