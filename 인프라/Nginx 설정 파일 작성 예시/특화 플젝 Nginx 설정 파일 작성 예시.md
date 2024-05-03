@@ -73,7 +73,6 @@ server {
         server_name 도메인;
 
 
-
         ssl_certificate /etc/letsencrypt/live/도메인/fullchain.pem; # managed by Certbot
         ssl_certificate_key /etc/letsencrypt/live/도메인/privkey.pem; # managed by Certbot
         include /etc/letsencrypt/options-ssl-nginx.conf; # managed by Certbot
