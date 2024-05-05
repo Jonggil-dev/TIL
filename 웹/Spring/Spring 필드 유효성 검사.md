@@ -1,10 +1,17 @@
-# Spring 유효성 검사 방법
+# Spring 필드 유효성 검사
 
 ### 1. Bean Validation의 기본과 `@Valid`의 역할
 - **Bean Validation**: Java의 표준 유효성 검사 방법으로, 클래스 필드에 `@NotNull`, `@NotEmpty`, `@Size` 등의 어노테이션을 사용하여 유효성 검사 규칙을 정의합니다.
 - **`@Valid`**: DTO 객체가 컨트롤러 메서드로 전달될 때 이 어노테이션을 사용하여 객체의 유효성 검사를 활성화합니다. `@Valid`**가 없으면 설정된 유효성 검사 규칙이 실행되지 않습니다.**
+- **DTO 말고 `@RequestParam`, `@PathVariable` 에 사용하는 `@NotNull`과 같은 단일 Bean Validation 어노테이션들은 `@Valid`나 `@Validated` 어노테이션 없이도 자동으로 유효성 검사가 적용됨**
 
+  ```java
+  @DeleteMapping("/child")
+  public void deleteChild(@RequestParam @NotNull Integer childId) {
+  }
+  ```
 
+  
 
 ### 2. `@Pattern` 사용과 에러 메시지 처리
 - **`@Pattern`**: 정규식을 사용하여 문자열 필드가 특정 패턴을 따르는지 검사합니다. 예: `@Pattern(regexp = "^[a-zA-Z0-9]{6,12}$", message = "Username must be 6 to 12 alphanumeric characters")`는 사용자 이름이 6~12자의 영문자 또는 숫자여야 함을 검증합니다. 또한, 예외 발생 시 `message`에 작성된 부분이 예외 응답 객체에 담깁니다.
@@ -68,4 +75,3 @@
       }
   }
   ```
-  
