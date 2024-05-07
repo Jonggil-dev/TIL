@@ -49,7 +49,6 @@ public class CustomAuthenticationSuccessHandler implements AuthenticationSuccess
             response.setContentType("application/json;charset=UTF-8");
             response.getWriter().write("{\"error\": \"올바른 FCM 토큰 형식이 아닙니다.\"}");
             response.getWriter().flush();
-            System.out.println("testtest");
             return;
         }
 

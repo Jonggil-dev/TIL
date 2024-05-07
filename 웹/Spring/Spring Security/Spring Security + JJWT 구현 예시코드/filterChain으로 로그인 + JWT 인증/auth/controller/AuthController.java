@@ -1,6 +1,8 @@
 package com.example.icecream.common.auth.controller;
 
+import com.example.icecream.common.auth.dto.JwtTokenDto;
 import com.example.icecream.common.auth.dto.LoginResponseDto;
+import com.example.icecream.common.auth.dto.RefreshTokenDto;
 import com.example.icecream.common.auth.service.AuthService;
 import com.example.icecream.common.auth.util.JwtUtil;
 import com.example.icecream.common.dto.ApiResponseDto;
@@ -30,15 +32,15 @@ public class AuthController {
     }
 
 //    @PostMapping("/logout")
-//    public ResponseEntity<?> signOut(@RequestBody LogoutRequest logoutRequest, @AuthenticationPrincipal UserDetails userDetails) {
+//    public ResponseEntity<?> signOut(@RequestBody @Valid RefreshTokenDto refreshTokenDto, @AuthenticationPrincipal UserDetails userDetails) {
 //        User user = UserUtil.getUserFromUserDetails(userDetails);
 //        jwtUtil.invalidateRefreshToken(user.getUserLoginId());
 //        return ResponseUtil.buildBasicResponse(HttpStatus.OK,"로그아웃 되었습니다.");
 //    }
-//
-//    @PostMapping("/reissue")
-//    public ResponseEntity<?> reissue(@RequestBody JwtToken jwtToken) {
-//        JwtToken newToken = jwtTokenProvider.reissueToken(jwtToken.getRefreshToken());
-//        return ResponseUtil.buildBasicResponse(HttpStatus.OK, newToken);
-//    }
+
+    @PostMapping("/reissue")
+    public ResponseEntity<ApiResponseDto<JwtTokenDto>> reissue(@RequestBody @Valid RefreshTokenDto refreshTokenDto) {
+        JwtTokenDto newToken = jwtUtil.reissueToken(refreshTokenDto.getRefreshToken());
+        return ApiResponseDto.success("새로운 토큰이 발급되었습니다", newToken);
+    }
 }

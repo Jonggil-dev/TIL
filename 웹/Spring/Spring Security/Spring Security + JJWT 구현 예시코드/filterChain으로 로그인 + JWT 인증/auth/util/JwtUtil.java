@@ -18,6 +18,7 @@ import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.util.ObjectUtils;
 
 
 import java.util.Arrays;
@@ -40,7 +41,7 @@ public class JwtUtil {
     public JwtTokenDto generateTokenByFilterChain(Authentication authentication, int userId) {
         byte[] signingKey = secretKey.getBytes();
 
-        String authorities = authentication.getAuthorities().stream()
+        String authority = authentication.getAuthorities().stream()
                 .map(GrantedAuthority::getAuthority)
                 .collect(Collectors.joining(","));
 
@@ -49,7 +50,7 @@ public class JwtUtil {
         Date accessTokenExpiresIn = new Date(now + 28800000);
         String accessToken = Jwts.builder()
                 .setSubject(String.valueOf(userId))
-                .claim("authorities", authorities)
+                .claim("authority", authority)
                 .setExpiration(accessTokenExpiresIn)
                 .signWith(Keys.hmacShaKeyFor(signingKey), SignatureAlgorithm.HS256)
                 .compact();
@@ -59,11 +60,11 @@ public class JwtUtil {
         String refreshToken = Jwts.builder()
                 .setSubject(String.valueOf(userId))
                 .setExpiration(refreshTokenExpiresIn)
-                .claim("authorities", authorities)
+                .claim("authority", authority)
                 .signWith(Keys.hmacShaKeyFor(signingKey), SignatureAlgorithm.HS256)
                 .compact();
 
-        saveRefreshToken(authentication.getName(), refreshToken);
+        saveRefreshToken(String.valueOf(userId), refreshToken);
 
         return JwtTokenDto.builder()
                 .accessToken(accessToken)
@@ -71,7 +72,7 @@ public class JwtUtil {
                 .build();
     }
 
-    public JwtTokenDto generateTokenByController(String userId, String authorities) {
+    public JwtTokenDto generateTokenByController(String userId, String authority) {
         byte[] signingKey = secretKey.getBytes();
 
         long now = (new Date()).getTime();
@@ -79,7 +80,7 @@ public class JwtUtil {
         Date accessTokenExpiresIn = new Date(now + 28800000);
         String accessToken = Jwts.builder()
                 .setSubject(userId)
-                .claim("authorities", authorities)
+                .claim("authority", authority)
                 .setExpiration(accessTokenExpiresIn)
                 .signWith(Keys.hmacShaKeyFor(signingKey), SignatureAlgorithm.HS256)
                 .compact();
@@ -89,7 +90,7 @@ public class JwtUtil {
         String refreshToken = Jwts.builder()
                 .setSubject(userId)
                 .setExpiration(refreshTokenExpiresIn)
-                .claim("authorities", authorities)
+                .claim("authority", authority)
                 .signWith(Keys.hmacShaKeyFor(signingKey), SignatureAlgorithm.HS256)
                 .compact();
 
@@ -139,39 +140,29 @@ public class JwtUtil {
         }
         return false;
     }
-//
-//    public JwtToken reissueToken(String refreshToken) {
-//
-//        validateToken(refreshToken);
-//
-//        String userLoginId = parseClaims(refreshToken).getSubject();
-//
-//        com.e102.simcheonge_server.domain.user.entity.User user = userRepository.findByUserLoginId(userLoginId)
-//                .orElseThrow(() -> new DataNotFoundException("해당 사용자가 존재하지 않습니다."));
-//
-//        // 직렬화
-//
-//        String redisRefreshToken = jwtUtil.findRefreshTokenInRedis(userLoginId);
-//
-//
-//        if (ObjectUtils.isEmpty(redisRefreshToken)) {
-//            throw new IllegalArgumentException(("reissue: 로그아웃 상태입니다: redis에 refresh token이 존재하지 않습니다"));
-//        }
-//        if (!redisRefreshToken.equals(refreshToken)) {
-//            throw new IllegalArgumentException("reissue: refresh token이 redis에 저장된 refresh token과 다릅니다");
-//        }
-//
-//        // 새로운 Authentication 객체 생성
-//        UserDetails userDetails = new User(user.getUserLoginId(), "", Arrays.asList(new SimpleGrantedAuthority("ROLE_USER"))); // 권한은 예시로 설정
-//        UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
-//
-//        // 새로운 토큰 생성
-//        JwtToken newToken = generateToken(authentication);
-//
-//        //새로운 토큰 반환
-//        return newToken;
-//    }
-//
+
+    public JwtTokenDto reissueToken(String refreshToken) {
+        validateToken(refreshToken);
+
+        Claims claims = parseClaims(refreshToken);
+        String userId = claims.getSubject();
+        String authority = claims.get("authority", String.class);
+
+        com.example.icecream.domain.user.entity.User user = userRepository.findById(Integer.parseInt(userId))
+                .orElseThrow(() -> new IllegalArgumentException("해당 사용자가 존재하지 않습니다."));
+
+        String redisRefreshToken = findRefreshTokenInRedis(userId);
+
+        if (ObjectUtils.isEmpty(redisRefreshToken)) {
+            throw new IllegalArgumentException(("reissue: 로그아웃 상태입니다: redis에 refresh token이 존재하지 않습니다"));
+        }
+        if (!redisRefreshToken.equals(refreshToken)) {
+            throw new IllegalArgumentException("reissue: refresh token이 redis에 저장된 refresh token과 다릅니다");
+        }
+
+        return generateTokenByController(userId,authority);
+    }
+
 
     private Claims parseClaims(String accessToken) {
         try {
@@ -186,17 +177,17 @@ public class JwtUtil {
         }
     }
 
-    public void saveRefreshToken(String deviceId, String refreshToken) {
+    public void saveRefreshToken(String userId, String refreshToken) {
         ValueOperations<String, String> valueOperations = redisTemplate.opsForValue();
-        valueOperations.set("refreshToken:" + deviceId, refreshToken, 12, TimeUnit.HOURS); // 1일 동안 유효
+        valueOperations.set("refreshToken:" + userId, refreshToken, 12, TimeUnit.HOURS);
     }
-//
-//    public String findRefreshTokenInRedis(String userLoginId) {
-//        ValueOperations<String, String> valueOperations = redisTemplate.opsForValue();
-//        return valueOperations.get("refreshToken:" + userLoginId);
-//    }
-//
-//    public void invalidateRefreshToken(String userLoginId) {
-//        redisTemplate.delete("refreshToken:" + userLoginId);
-//    }
+
+    public String findRefreshTokenInRedis(String userId) {
+        ValueOperations<String, String> valueOperations = redisTemplate.opsForValue();
+        return valueOperations.get("refreshToken:" + userId);
+    }
+
+    public void invalidateRefreshToken(String userId) {
+        redisTemplate.delete("refreshToken:" + userId);
+    }
 }
