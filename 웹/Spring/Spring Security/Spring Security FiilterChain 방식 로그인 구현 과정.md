@@ -29,7 +29,7 @@
 
 - ### 각 흐름별 예시 코드
 
-  - **`CustomUsernamePasswordAuthenticationFilter(=LoginIdAuthenticationFilter)`**
+  - **`LoginIdAuthenticationFilter(=CustomUsernamePasswordAuthenticationFilter)`**
 
     - 하기 예시코드의 생성자 설명
       - `CustomUserDetails`를 사용하기로 세팅 되어 있는 `AuthenticationManager`를 사용하도록 설정함 (이 때 `authenticationManager`에 `CustomUserDetails`를 설정하는 것은 `SecurityConfig`에서 설정 해놓음)
@@ -52,6 +52,7 @@
     import jakarta.servlet.ServletException;
     
     import org.springframework.security.authentication.AuthenticationManager;
+    import org.springframework.security.authentication.AuthenticationServiceException;
     import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
     import org.springframework.security.core.Authentication;
     import org.springframework.security.core.AuthenticationException;
@@ -78,6 +79,9 @@
     
         @Override
         public Authentication attemptAuthentication(HttpServletRequest request, HttpServletResponse response) throws AuthenticationException {
+            if (!request.getMethod().equals("POST")) {
+                throw new AuthenticationServiceException("Authentication method not supported: " + request.getMethod());
+            }
             try {
                 LoginRequestDto loginRequestDto = objectMapper.readValue(request.getInputStream(), LoginRequestDto.class);
                 request.setAttribute("fcmToken", loginRequestDto.getFcmToken());
@@ -96,12 +100,12 @@
         }
     }
     ```
-
+  
   - **`CustomUserDetailsService`**
-
+  
     - 인증 과정에서 `request` 데이터와 비교가 되는 `UserDetails`의 객체를 생성하는 로직을 수행
       (DB에 저장된 유저 정보를 바탕으로 `UserDetails` 객체를 생성)
-
+  
     ```java
     package com.example.icecream.common.auth.service;
     
@@ -147,9 +151,9 @@
     ```
 
   - **`CustomAuthenticationSuccessHandler`**
-
+  
     - `onAuthenticationSuccess()`를 실행하여 인증 성공 후의 로직을 수행함
-
+  
     ```java
     package com.example.icecream.common.auth.handler;
     
@@ -228,13 +232,13 @@
         }
     }
     ```
-
+  
   - **`SecurityConfig`**
 
     - `filterChain`에 커스텀한 필터들을 등록 
     - `CustomUserDetailsService`을 사용하도록 `authenticationManager`에 `CustomUserDetailsService`을 설정
     - 로그인 인증 과정에서 DB에 저장된 password 해싱 값과 비교하기 위해 request의 `password`를 해싱하는 과정이 필요함. 이 때 필요한 `passwordEncoder` 설정
-
+  
     ```java
     package com.example.icecream.common.config;
     
