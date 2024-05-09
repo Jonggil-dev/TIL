@@ -1,5 +1,7 @@
 package com.example.icecream.common.auth.service;
 
+import com.example.icecream.common.auth.error.AuthErrorCode;
+import com.example.icecream.common.exception.NotFoundException;
 import com.example.icecream.domain.user.entity.User;
 import com.example.icecream.domain.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -23,7 +25,7 @@ public class CustomUserDetailsService implements UserDetailsService {
     public UserDetails loadUserByUsername(String loginId) throws UsernameNotFoundException {
         return userRepository.findByLoginId(loginId)
                 .map(this::createUserDetails)
-                .orElseThrow(() -> new UsernameNotFoundException("유저 정보를 찾을 수 없습니다."));
+                .orElseThrow(() -> new NotFoundException(AuthErrorCode.USER_NOT_FOUND.getMessage()));
     }
 
     private UserDetails createUserDetails(User user) {

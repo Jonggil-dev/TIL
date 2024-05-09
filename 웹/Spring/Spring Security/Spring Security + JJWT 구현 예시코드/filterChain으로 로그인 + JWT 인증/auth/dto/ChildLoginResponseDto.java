@@ -7,6 +7,7 @@ import lombok.Getter;
 @Getter
 @Builder
 public class ChildLoginResponseDto implements LoginResponseDto {
+    private int userId;
     private String username;
     private String phoneNumber;
     private String profileImage;

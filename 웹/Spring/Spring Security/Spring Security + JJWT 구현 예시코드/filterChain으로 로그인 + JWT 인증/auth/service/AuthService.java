@@ -1,7 +1,9 @@
 package com.example.icecream.common.auth.service;
 
 import com.example.icecream.common.auth.dto.*;
+import com.example.icecream.common.auth.error.AuthErrorCode;
 import com.example.icecream.common.auth.util.JwtUtil;
+import com.example.icecream.common.exception.NotFoundException;
 import com.example.icecream.domain.notification.dto.LoginRequestDto;
 import com.example.icecream.domain.notification.service.NotificationService;
 import com.example.icecream.domain.user.entity.User;
@@ -28,7 +30,7 @@ public class AuthService {
     public LoginResponseDto deviceLogin(DeviceLoginRequestDto deviceLoginRequestDto) {
 
         User user = userRepository.findByDeviceId(deviceLoginRequestDto.getDeviceId())
-                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 유저 입니다."));
+                .orElseThrow(() -> new NotFoundException(AuthErrorCode.USER_NOT_FOUND.getMessage()));
 
         if (user.getIsParent()) {
             if (jwtUtil.validateToken(deviceLoginRequestDto.getRefreshToken())) {
@@ -48,8 +50,6 @@ public class AuthService {
                         .accessToken(jwtTokenDto.getAccessToken())
                         .refreshToken(jwtTokenDto.getRefreshToken())
                         .build();
-
-
             }
         }
 
@@ -58,6 +58,7 @@ public class AuthService {
         notificationService.saveOrUpdateFcmToken(loginRequestDto);
 
         return ChildLoginResponseDto.builder()
+                .userId(user.getId())
                 .username(user.getUsername())
                 .phoneNumber(user.getPhoneNumber())
                 .profileImage(user.getProfileImage())

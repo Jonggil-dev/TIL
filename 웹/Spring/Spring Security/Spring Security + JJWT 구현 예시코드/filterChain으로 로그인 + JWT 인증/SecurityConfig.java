@@ -2,10 +2,12 @@ package com.example.icecream.common.config;
 
 import com.example.icecream.common.auth.filter.JwtAuthenticationFilter;
 import com.example.icecream.common.auth.filter.LoginIdAuthenticationFilter;
+import com.example.icecream.common.auth.handler.CustomAuthenticationEntryPoint;
 import com.example.icecream.common.auth.handler.CustomAuthenticationSuccessHandler;
 import com.example.icecream.common.auth.service.CustomUserDetailsService;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 
 import org.springframework.context.annotation.Bean;
@@ -21,6 +23,7 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.crypto.factory.PasswordEncoderFactories;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.web.access.AccessDeniedHandler;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 @Configuration
@@ -28,10 +31,12 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 @RequiredArgsConstructor
 public class SecurityConfig {
 
+    private final ObjectMapper objectMapper;
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final CustomUserDetailsService customUserDetailService;
     private final CustomAuthenticationSuccessHandler customAuthenticationSuccessHandler;
-    private final ObjectMapper objectMapper;
+    private final CustomAuthenticationEntryPoint customAuthenticationEntryPoint;
+
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity httpSecurity, AuthenticationManager authenticationManager) throws Exception {
@@ -49,6 +54,8 @@ public class SecurityConfig {
                         .requestMatchers("/users/check", "/auth/login", "/auth/device/login","auth/reissue")
                         .permitAll()
                         .anyRequest().authenticated())
+                .exceptionHandling((exceptionConfig) ->
+                        exceptionConfig.authenticationEntryPoint(customAuthenticationEntryPoint))
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
                 .addFilterAt(loginIdAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
                 .build();
