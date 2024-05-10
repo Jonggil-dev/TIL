@@ -1,4 +1,4 @@
-# Spring Security filterChain.dofilter() 메서드
+# Spring Security FilteChain.dofilter 메서드
 
 - **필터 체인의 동작 방식을 이해할 때 중요한 부분은 `doFilter` 메소드 호출이 필터 체인에서 다음 필터로의 요청 처리를 위임한다는 것**
 - **이 때 `doFilter` 호출 이후의 코드는 응답이 클라이언트로 돌아가는 길에 실행되고, 이를 '후처리'라고 부름** 그러나 `doFilter` 호출 이후 `return` 문을 만나게 된다는 것은 클라이언트로 돌아가는 길에 return을 만나게 되니까, 그 필터에서의 추가적인 후처리 코드는 실행되지 않게 된다는 의미임. 
