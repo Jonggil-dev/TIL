@@ -1,9 +1,7 @@
-package com.example.icecream.common.auth.util;
+package com.example.icecream.domain.user.auth.util;
 
-import com.example.icecream.common.auth.dto.JwtTokenDto;
-import com.example.icecream.common.auth.error.AuthErrorCode;
-import com.example.icecream.common.exception.NotFoundException;
-import com.example.icecream.domain.user.repository.UserRepository;
+import com.example.icecream.domain.user.auth.dto.JwtTokenDto;
+import com.example.icecream.domain.user.auth.error.AuthErrorCode;
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
 
@@ -35,12 +33,14 @@ import java.util.stream.Collectors;
 public class JwtUtil {
 
     @Value("${com.icecream.auth.access.secretKey}")
-    private String secretKey;
+    private String accessSecretKey;
+    @Value("${com.icecream.auth.refresh.secretKey}")
+    private String refreshSecretKey;
     private final RedisTemplate<String, String> redisTemplate;
-    private final UserRepository userRepository;
 
     public JwtTokenDto generateTokenByFilterChain(Authentication authentication, int userId) {
-        byte[] signingKey = secretKey.getBytes();
+        byte[] accessSigningKey = accessSecretKey.getBytes();
+        byte[] refreshSigningKey = refreshSecretKey.getBytes();
 
         String authority = authentication.getAuthorities().stream()
                 .map(GrantedAuthority::getAuthority)
@@ -53,7 +53,7 @@ public class JwtUtil {
                 .setSubject(String.valueOf(userId))
                 .claim("authority", authority)
                 .setExpiration(accessTokenExpiresIn)
-                .signWith(Keys.hmacShaKeyFor(signingKey), SignatureAlgorithm.HS256)
+                .signWith(Keys.hmacShaKeyFor(accessSigningKey), SignatureAlgorithm.HS256)
                 .compact();
 
 
@@ -62,7 +62,7 @@ public class JwtUtil {
                 .setSubject(String.valueOf(userId))
                 .setExpiration(refreshTokenExpiresIn)
                 .claim("authority", authority)
-                .signWith(Keys.hmacShaKeyFor(signingKey), SignatureAlgorithm.HS256)
+                .signWith(Keys.hmacShaKeyFor(refreshSigningKey), SignatureAlgorithm.HS256)
                 .compact();
 
         saveRefreshToken(String.valueOf(userId), refreshToken);
@@ -74,7 +74,8 @@ public class JwtUtil {
     }
 
     public JwtTokenDto generateTokenByController(String userId, String authority) {
-        byte[] signingKey = secretKey.getBytes();
+        byte[] accessSigningKey = accessSecretKey.getBytes();
+        byte[] refreshSigningKey = refreshSecretKey.getBytes();
 
         long now = (new Date()).getTime();
 
@@ -83,7 +84,7 @@ public class JwtUtil {
                 .setSubject(userId)
                 .claim("authority", authority)
                 .setExpiration(accessTokenExpiresIn)
-                .signWith(Keys.hmacShaKeyFor(signingKey), SignatureAlgorithm.HS256)
+                .signWith(Keys.hmacShaKeyFor(accessSigningKey), SignatureAlgorithm.HS256)
                 .compact();
 
 
@@ -92,7 +93,7 @@ public class JwtUtil {
                 .setSubject(userId)
                 .setExpiration(refreshTokenExpiresIn)
                 .claim("authority", authority)
-                .signWith(Keys.hmacShaKeyFor(signingKey), SignatureAlgorithm.HS256)
+                .signWith(Keys.hmacShaKeyFor(refreshSigningKey), SignatureAlgorithm.HS256)
                 .compact();
 
         saveRefreshToken(userId, refreshToken);
@@ -106,7 +107,7 @@ public class JwtUtil {
     // Jwt 토큰을 복호화하여 토큰에 들어있는 정보를 꺼내는 메서드
     public Authentication getAuthentication(String accessToken) {
 
-        Claims claims = parseClaims(accessToken);
+        Claims claims = parseAccessClaims(accessToken);
 
         if (claims.get("authority") == null) {
             throw new BadCredentialsException(AuthErrorCode.INVALID_TOKEN.getMessage());
@@ -121,12 +122,12 @@ public class JwtUtil {
     }
 
     // 토큰 정보를 검증하는 메서드
-    public boolean validateToken(String token) {
+    public boolean validateAccessToken(String token) {
         try {
-            byte[] signingKey = secretKey.getBytes();
+            byte[] accessSigningKey = accessSecretKey.getBytes();
 
             Jwts.parserBuilder()
-                    .setSigningKey(Keys.hmacShaKeyFor(signingKey))
+                    .setSigningKey(Keys.hmacShaKeyFor(accessSigningKey))
                     .build()
                     .parseClaimsJws(token);
             return true;
@@ -135,15 +136,27 @@ public class JwtUtil {
         }
     }
 
-    public JwtTokenDto reissueToken(String refreshToken) {
-        validateToken(refreshToken);
+    public boolean validateRefreshToken(String token) {
+        try {
+            byte[] refreshSigningKey = refreshSecretKey.getBytes();
 
-        Claims claims = parseClaims(refreshToken);
+            Jwts.parserBuilder()
+                    .setSigningKey(Keys.hmacShaKeyFor(refreshSigningKey))
+                    .build()
+                    .parseClaimsJws(token);
+            return true;
+
+        } catch (Exception e) {
+            throw new BadCredentialsException(AuthErrorCode.INVALID_TOKEN.getMessage());
+        }
+    }
+
+    public JwtTokenDto reissueToken(String refreshToken) {
+        validateRefreshToken(refreshToken);
+
+        Claims claims = parseRefreshClaims(refreshToken);
         String userId = claims.getSubject();
         String authority = claims.get("authority", String.class);
-
-        com.example.icecream.domain.user.entity.User user = userRepository.findById(Integer.parseInt(userId))
-                .orElseThrow(() -> new NotFoundException(AuthErrorCode.USER_NOT_FOUND.getMessage()));
 
         String redisRefreshToken = findRefreshTokenInRedis(userId);
 
@@ -157,12 +170,25 @@ public class JwtUtil {
         return generateTokenByController(userId,authority);
     }
 
-
-    private Claims parseClaims(String accessToken) {
+    private Claims parseAccessClaims(String accessToken) {
         try {
-            byte[] signingKey = secretKey.getBytes();
+            byte[] accessSigningKey = accessSecretKey.getBytes();
+
             return Jwts.parserBuilder()
-                    .setSigningKey(Keys.hmacShaKeyFor(signingKey))
+                    .setSigningKey(Keys.hmacShaKeyFor(accessSigningKey))
+                    .build()
+                    .parseClaimsJws(accessToken)
+                    .getBody();
+        } catch (ExpiredJwtException e) {
+            return e.getClaims();
+        }
+    }
+
+    private Claims parseRefreshClaims(String accessToken) {
+        try {
+            byte[] refreshSigningKey = refreshSecretKey.getBytes();
+            return Jwts.parserBuilder()
+                    .setSigningKey(Keys.hmacShaKeyFor(refreshSigningKey))
                     .build()
                     .parseClaimsJws(accessToken)
                     .getBody();

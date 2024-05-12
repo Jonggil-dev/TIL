@@ -1,4 +1,4 @@
-package com.example.icecream.common.auth.dto;
+package com.example.icecream.domain.user.auth.dto;
 
 import lombok.Builder;
 import lombok.Getter;

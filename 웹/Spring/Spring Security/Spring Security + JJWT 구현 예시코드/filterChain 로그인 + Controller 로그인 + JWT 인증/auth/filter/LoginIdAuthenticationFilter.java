@@ -1,8 +1,8 @@
-package com.example.icecream.common.auth.filter;
+package com.example.icecream.domain.user.auth.filter;
 
-import com.example.icecream.common.auth.dto.LoginRequestDto;
-import com.example.icecream.common.auth.error.AuthErrorCode;
-import com.example.icecream.common.auth.handler.CustomAuthenticationSuccessHandler;
+import com.example.icecream.domain.user.auth.dto.LoginRequestDto;
+import com.example.icecream.domain.user.auth.error.AuthErrorCode;
+import com.example.icecream.domain.user.auth.handler.CustomAuthenticationSuccessHandler;
 import com.example.icecream.common.exception.BadRequestException;
 import com.example.icecream.common.exception.InternalServerException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -10,7 +10,6 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 
 import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.authentication.AuthenticationServiceException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;

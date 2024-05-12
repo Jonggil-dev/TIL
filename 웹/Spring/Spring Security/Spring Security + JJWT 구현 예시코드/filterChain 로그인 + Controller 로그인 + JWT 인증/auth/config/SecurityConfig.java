@@ -1,13 +1,13 @@
-package com.example.icecream.common.config;
+package com.example.icecream.domain.user.auth.config;
 
-import com.example.icecream.common.auth.filter.JwtAuthenticationFilter;
-import com.example.icecream.common.auth.filter.LoginIdAuthenticationFilter;
-import com.example.icecream.common.auth.handler.CustomAuthenticationEntryPoint;
-import com.example.icecream.common.auth.handler.CustomAuthenticationSuccessHandler;
-import com.example.icecream.common.auth.service.CustomUserDetailsService;
+import com.example.icecream.domain.user.auth.filter.JwtAuthenticationFilter;
+import com.example.icecream.domain.user.auth.filter.LoginIdAuthenticationFilter;
+import com.example.icecream.domain.user.auth.handler.CustomAuthenticationEntryPoint;
+import com.example.icecream.domain.user.auth.handler.CustomAuthenticationSuccessHandler;
+import com.example.icecream.domain.user.auth.service.CustomUserDetailsService;
 
+import com.example.icecream.domain.user.auth.util.JwtUtil;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 
 import org.springframework.context.annotation.Bean;
@@ -23,7 +23,6 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.crypto.factory.PasswordEncoderFactories;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.security.web.access.AccessDeniedHandler;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 @Configuration
@@ -32,15 +31,15 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 public class SecurityConfig {
 
     private final ObjectMapper objectMapper;
-    private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final JwtUtil jwtUtil;
     private final CustomUserDetailsService customUserDetailService;
     private final CustomAuthenticationSuccessHandler customAuthenticationSuccessHandler;
     private final CustomAuthenticationEntryPoint customAuthenticationEntryPoint;
 
-
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity httpSecurity, AuthenticationManager authenticationManager) throws Exception {
         LoginIdAuthenticationFilter loginIdAuthenticationFilter = new LoginIdAuthenticationFilter(authenticationManager, customAuthenticationSuccessHandler, objectMapper);
+        JwtAuthenticationFilter jwtAuthenticationFilter = new JwtAuthenticationFilter(jwtUtil);
 
         return httpSecurity
                 .formLogin(AbstractHttpConfigurer::disable)
@@ -51,7 +50,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(authorize -> authorize
                         .requestMatchers(HttpMethod.POST, "/users")
                         .permitAll()
-                        .requestMatchers("/users/check", "/auth/login", "/auth/device/login","auth/reissue")
+                        .requestMatchers("/users/check", "/auth/login", "/auth/device/login","/auth/reissue", "/error")
                         .permitAll()
                         .anyRequest().authenticated())
                 .exceptionHandling((exceptionConfig) ->

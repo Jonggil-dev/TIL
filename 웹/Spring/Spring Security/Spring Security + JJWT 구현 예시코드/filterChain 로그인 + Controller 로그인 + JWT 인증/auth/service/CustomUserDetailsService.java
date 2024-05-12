@@ -1,6 +1,6 @@
-package com.example.icecream.common.auth.service;
+package com.example.icecream.domain.user.auth.service;
 
-import com.example.icecream.common.auth.error.AuthErrorCode;
+import com.example.icecream.domain.user.auth.error.AuthErrorCode;
 import com.example.icecream.common.exception.NotFoundException;
 import com.example.icecream.domain.user.entity.User;
 import com.example.icecream.domain.user.repository.UserRepository;

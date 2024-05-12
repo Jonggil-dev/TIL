@@ -1,4 +1,4 @@
-# FilterChain PermitAll 메서드 정리
+# FilterChain PermitAll() 정리
 
 - ### 참고자료
 

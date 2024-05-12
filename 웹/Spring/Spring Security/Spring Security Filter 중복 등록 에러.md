@@ -19,61 +19,64 @@
 
 ### 3. 해결방법
 
-- **한 가지 방법만 사용**
+**(1) 필터를 등록하는 방법을 한 가지만 사용하기**
 
-  - 필터가 자동으로 등록되지 않도록 `JwtAuthenticationFilter`의 `@Component` 어노테이션을 제거
+- 필터가 자동으로 등록되지 않도록 `JwtAuthenticationFilter`의 `@Component` 어노테이션을 제거
 
-  - 스프링 시큐리티 설정파일에서는 해당 `Filter`를 생성자를 통해 생성해 필터체인에 등록
+- 스프링 시큐리티 설정파일에서는 해당 `Filter`를 생성자를 통해 생성해 필터체인에 등록
 
-  ```java
-  
-  
-    ```java
-    public class SecurityConfig {
-    
-        private final ObjectMapper objectMapper;
-        private final JwtUtil jwtUtil;
-        private final CustomUserDetailsService customUserDetailService;
-        private final CustomAuthenticationSuccessHandler customAuthenticationSuccessHandler;
-        private final CustomAuthenticationEntryPoint customAuthenticationEntryPoint;
-    
-    
-        @Bean
-        public SecurityFilterChain filterChain(HttpSecurity httpSecurity, AuthenticationManager authenticationManager) throws Exception {
-            LoginIdAuthenticationFilter loginIdAuthenticationFilter = new LoginIdAuthenticationFilter(authenticationManager, customAuthenticationSuccessHandler, objectMapper);
-            JwtAuthenticationFilter jwtAuthenticationFilter = new JwtAuthenticationFilter(jwtUtil, objectMapper);
-            return httpSecurity
-                    .formLogin(AbstractHttpConfigurer::disable)
-                    .httpBasic(AbstractHttpConfigurer::disable)
-                    .csrf(AbstractHttpConfigurer::disable)
-                    .sessionManagement(management ->
-                            management.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                    .authorizeHttpRequests(authorize -> authorize
-                            .requestMatchers(HttpMethod.POST, "/users")
-                            .permitAll()
-                            .requestMatchers("/users/check", "/auth/login", "/auth/device/login","auth/reissue")
-                            .permitAll()
-                            .anyRequest().authenticated())
-                    .exceptionHandling((exceptionConfig) ->
-                            exceptionConfig.authenticationEntryPoint(customAuthenticationEntryPoint))
-                    .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
-                    .addFilterAt(loginIdAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
-                    .build();
-        }
-    ```
-  
-    
-  ```
+```java
+@Configuration
+@EnableWebSecurity
+@RequiredArgsConstructor
+public class SecurityConfig {
 
-  
+    private final ObjectMapper objectMapper;
+    private final JwtUtil jwtUtil;
+    private final CustomUserDetailsService customUserDetailService;
+    private final CustomAuthenticationSuccessHandler customAuthenticationSuccessHandler;
+    private final CustomAuthenticationEntryPoint customAuthenticationEntryPoint;
 
-- **조건적 등록**: 필터를 `@Bean`으로 등록할 때, `FilterRegistrationBean`을 사용하여 필터의 자동 등록을 비활성화
 
-  ```java
-  @Bean
-  public FilterRegistrationBean<JwtAuthenticationFilter> registration(JwtAuthenticationFilter filter) {
-      FilterRegistrationBean<JwtAuthenticationFilter> registration = new FilterRegistrationBean<>(filter);
-      registration.setEnabled(false); // 필터를 필터 체인에 자동 등록하지 않도록 설정
-      return registration;
-  }
-  ```
+    @Bean
+    public SecurityFilterChain filterChain(HttpSecurity httpSecurity, AuthenticationManager authenticationManager) throws Exception {
+        JwtAuthenticationFilter jwtAuthenticationFilter = new JwtAuthenticationFilter(jwtUtil, objectMapper);
+					.
+                    .
+                    .
+                   중략
+                        
+        return httpSecurity
+                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+                .build();
+        
+}
+```
+
+```java
+@RequiredArgsConstructor
+public class JwtAuthenticationFilter extends OncePerRequestFilter {
+
+    private final JwtUtil jwtutil;
+    private final ObjectMapper objectMapper;
+    			.
+    			.
+    			.
+   			   중략
+}
+```
+
+
+
+**(2) 조건적 등록** 
+
+- 필터를 `@Bean`으로 등록할 때, `FilterRegistrationBean`을 사용하여 필터의 자동 등록을 비활성화
+
+```java
+@Bean
+public FilterRegistrationBean<JwtAuthenticationFilter> registration(JwtAuthenticationFilter filter) {
+    FilterRegistrationBean<JwtAuthenticationFilter> registration = new FilterRegistrationBean<>(filter);
+    registration.setEnabled(false); // 필터를 필터 체인에 자동 등록하지 않도록 설정
+    return registration;
+}
+```

@@ -1,4 +1,4 @@
-package com.example.icecream.common.auth.dto;
+package com.example.icecream.domain.user.auth.dto;
 
 import jakarta.validation.constraints.NotBlank;
 import lombok.Getter;

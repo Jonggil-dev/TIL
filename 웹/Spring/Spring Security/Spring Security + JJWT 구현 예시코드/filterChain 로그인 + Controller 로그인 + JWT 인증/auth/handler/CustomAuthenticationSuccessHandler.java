@@ -1,8 +1,9 @@
-package com.example.icecream.common.auth.handler;
+package com.example.icecream.domain.user.auth.handler;
 
-import com.example.icecream.common.auth.dto.JwtTokenDto;
-import com.example.icecream.common.auth.dto.ParentLoginResponseDto;
-import com.example.icecream.common.auth.util.JwtUtil;
+import com.example.icecream.domain.user.auth.dto.ChildrenResponseDto;
+import com.example.icecream.domain.user.auth.dto.JwtTokenDto;
+import com.example.icecream.domain.user.auth.dto.ParentLoginResponseDto;
+import com.example.icecream.domain.user.auth.util.JwtUtil;
 import com.example.icecream.common.dto.ApiResponseDto;
 import com.example.icecream.domain.notification.dto.LoginRequestDto;
 import com.example.icecream.domain.notification.service.NotificationService;
@@ -39,6 +40,10 @@ public class CustomAuthenticationSuccessHandler implements AuthenticationSuccess
         User user = userRepository.findByLoginId(authentication.getName()).orElseThrow(() -> new IllegalArgumentException("존재하지 않는 유저 입니다."));
         List<User> children = parentChildMappingRepository.findChildrenByParentId(user.getId());
 
+        List<ChildrenResponseDto> childrenResponseDto = children.stream()
+                .map(child -> new ChildrenResponseDto(child.getId(), child.getProfileImage(), child.getUsername(), child.getPhoneNumber()))
+                .toList();
+
         JwtTokenDto jwtToken = jwtUtil.generateTokenByFilterChain(authentication, user.getId());
 
         String fcmToken = (String) request.getAttribute("fcmToken");
@@ -59,7 +64,7 @@ public class CustomAuthenticationSuccessHandler implements AuthenticationSuccess
                 .loginId(user.getLoginId())
                 .phoneNumber(user.getPhoneNumber())
                 .profileImage(user.getProfileImage())
-                .children(children)
+                .children(childrenResponseDto)
                 .accessToken(jwtToken.getAccessToken())
                 .refreshToken(jwtToken.getRefreshToken())
                 .build();

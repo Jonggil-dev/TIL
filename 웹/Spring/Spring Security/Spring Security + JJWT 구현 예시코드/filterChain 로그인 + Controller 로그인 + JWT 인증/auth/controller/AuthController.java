@@ -1,12 +1,12 @@
-package com.example.icecream.common.auth.controller;
+package com.example.icecream.domain.user.auth.controller;
 
-import com.example.icecream.common.auth.dto.JwtTokenDto;
-import com.example.icecream.common.auth.dto.LoginResponseDto;
-import com.example.icecream.common.auth.dto.RefreshTokenDto;
-import com.example.icecream.common.auth.service.AuthService;
-import com.example.icecream.common.auth.util.JwtUtil;
+import com.example.icecream.domain.user.auth.dto.JwtTokenDto;
+import com.example.icecream.domain.user.auth.dto.LoginResponseDto;
+import com.example.icecream.domain.user.auth.dto.RefreshTokenDto;
+import com.example.icecream.domain.user.auth.service.AuthService;
+import com.example.icecream.domain.user.auth.util.JwtUtil;
 import com.example.icecream.common.dto.ApiResponseDto;
-import com.example.icecream.common.auth.dto.DeviceLoginRequestDto;
+import com.example.icecream.domain.user.auth.dto.DeviceLoginRequestDto;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 

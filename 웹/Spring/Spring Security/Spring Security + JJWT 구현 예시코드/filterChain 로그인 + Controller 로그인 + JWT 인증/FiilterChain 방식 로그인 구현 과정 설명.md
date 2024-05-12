@@ -43,16 +43,18 @@
     - 인증이 성공하면 `successfulAuthentication()` 메서드를 호출하여 `AuthenticationSuccessHandler`에서 인증 성공 후의 로직을 처리함
 
     ```java
-    package com.example.icecream.common.auth.filter;
+    package com.example.icecream.domain.user.auth.filter;
     
-    import com.example.icecream.common.auth.dto.LoginRequestDto;
-    import com.example.icecream.common.auth.handler.CustomAuthenticationSuccessHandler;
+    import com.example.icecream.domain.user.auth.dto.LoginRequestDto;
+    import com.example.icecream.domain.user.auth.error.AuthErrorCode;
+    import com.example.icecream.domain.user.auth.handler.CustomAuthenticationSuccessHandler;
+    import com.example.icecream.common.exception.BadRequestException;
+    import com.example.icecream.common.exception.InternalServerException;
     import com.fasterxml.jackson.databind.ObjectMapper;
     import jakarta.servlet.FilterChain;
     import jakarta.servlet.ServletException;
     
     import org.springframework.security.authentication.AuthenticationManager;
-    import org.springframework.security.authentication.AuthenticationServiceException;
     import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
     import org.springframework.security.core.Authentication;
     import org.springframework.security.core.AuthenticationException;
@@ -80,9 +82,11 @@
         @Override
         public Authentication attemptAuthentication(HttpServletRequest request, HttpServletResponse response) throws AuthenticationException {
             if (!request.getMethod().equals("POST")) {
-                throw new AuthenticationServiceException("Authentication method not supported: " + request.getMethod());
+                throw new BadRequestException(AuthErrorCode.INVALID_HTTP_METHOD.getMessage());
             }
+    
             try {
+    
                 LoginRequestDto loginRequestDto = objectMapper.readValue(request.getInputStream(), LoginRequestDto.class);
                 request.setAttribute("fcmToken", loginRequestDto.getFcmToken());
                 UsernamePasswordAuthenticationToken usernamePasswordAuthenticationToken =
@@ -90,7 +94,7 @@
                 return  getAuthenticationManager().authenticate(usernamePasswordAuthenticationToken);
     
             } catch (IOException ex) {
-                throw new Error("로그인 정보를 역직렬화 하는데 실패했습니다.");
+                throw new InternalServerException(AuthErrorCode.INPUT_SERIALIZE_FAIL.getMessage());
             }
         }
     
@@ -107,8 +111,10 @@
       (DB에 저장된 유저 정보를 바탕으로 `UserDetails` 객체를 생성)
   
     ```java
-    package com.example.icecream.common.auth.service;
+    package com.example.icecream.domain.user.auth.service;
     
+    import com.example.icecream.domain.user.auth.error.AuthErrorCode;
+    import com.example.icecream.common.exception.NotFoundException;
     import com.example.icecream.domain.user.entity.User;
     import com.example.icecream.domain.user.repository.UserRepository;
     import lombok.RequiredArgsConstructor;
@@ -132,7 +138,7 @@
         public UserDetails loadUserByUsername(String loginId) throws UsernameNotFoundException {
             return userRepository.findByLoginId(loginId)
                     .map(this::createUserDetails)
-                    .orElseThrow(() -> new UsernameNotFoundException("유저 정보를 찾을 수 없습니다."));
+                    .orElseThrow(() -> new NotFoundException(AuthErrorCode.USER_NOT_FOUND.getMessage()));
         }
     
         private UserDetails createUserDetails(User user) {
@@ -148,18 +154,20 @@
             return Collections.singletonList(new SimpleGrantedAuthority(role));
         }
     }
+    
     ```
-
+  
   - **`CustomAuthenticationSuccessHandler`**
   
     - `onAuthenticationSuccess()`를 실행하여 인증 성공 후의 로직을 수행함
   
     ```java
-    package com.example.icecream.common.auth.handler;
+    package com.example.icecream.domain.user.auth.handler;
     
-    import com.example.icecream.common.auth.dto.JwtTokenDto;
-    import com.example.icecream.common.auth.dto.ParentLoginResponseDto;
-    import com.example.icecream.common.auth.util.JwtUtil;
+    import com.example.icecream.domain.user.auth.dto.ChildrenResponseDto;
+    import com.example.icecream.domain.user.auth.dto.JwtTokenDto;
+    import com.example.icecream.domain.user.auth.dto.ParentLoginResponseDto;
+    import com.example.icecream.domain.user.auth.util.JwtUtil;
     import com.example.icecream.common.dto.ApiResponseDto;
     import com.example.icecream.domain.notification.dto.LoginRequestDto;
     import com.example.icecream.domain.notification.service.NotificationService;
@@ -189,13 +197,16 @@
         private final ParentChildMappingRepository parentChildMappingRepository;
         private final NotificationService notificationService;
     
-    
         @Override
         public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response,
                                             Authentication authentication) throws IOException {
     
             User user = userRepository.findByLoginId(authentication.getName()).orElseThrow(() -> new IllegalArgumentException("존재하지 않는 유저 입니다."));
             List<User> children = parentChildMappingRepository.findChildrenByParentId(user.getId());
+    
+            List<ChildrenResponseDto> childrenResponseDto = children.stream()
+                    .map(child -> new ChildrenResponseDto(child.getId(), child.getProfileImage(), child.getUsername(), child.getPhoneNumber()))
+                    .toList();
     
             JwtTokenDto jwtToken = jwtUtil.generateTokenByFilterChain(authentication, user.getId());
     
@@ -206,7 +217,6 @@
                 response.setContentType("application/json;charset=UTF-8");
                 response.getWriter().write("{\"error\": \"올바른 FCM 토큰 형식이 아닙니다.\"}");
                 response.getWriter().flush();
-                System.out.println("testtest");
                 return;
             }
     
@@ -218,7 +228,7 @@
                     .loginId(user.getLoginId())
                     .phoneNumber(user.getPhoneNumber())
                     .profileImage(user.getProfileImage())
-                    .children(children)
+                    .children(childrenResponseDto)
                     .accessToken(jwtToken.getAccessToken())
                     .refreshToken(jwtToken.getRefreshToken())
                     .build();
@@ -234,19 +244,21 @@
     ```
   
   - **`SecurityConfig`**
-
+  
     - `filterChain`에 커스텀한 필터들을 등록 
     - `CustomUserDetailsService`을 사용하도록 `authenticationManager`에 `CustomUserDetailsService`을 설정
     - 로그인 인증 과정에서 DB에 저장된 password 해싱 값과 비교하기 위해 request의 `password`를 해싱하는 과정이 필요함. 이 때 필요한 `passwordEncoder` 설정
   
     ```java
-    package com.example.icecream.common.config;
+    package com.example.icecream.domain.user.auth.config;
     
-    import com.example.icecream.common.auth.filter.JwtAuthenticationFilter;
-    import com.example.icecream.common.auth.filter.LoginIdAuthenticationFilter;
-    import com.example.icecream.common.auth.handler.CustomAuthenticationSuccessHandler;
-    import com.example.icecream.common.auth.service.CustomUserDetailsService;
+    import com.example.icecream.domain.user.auth.filter.JwtAuthenticationFilter;
+    import com.example.icecream.domain.user.auth.filter.LoginIdAuthenticationFilter;
+    import com.example.icecream.domain.user.auth.handler.CustomAuthenticationEntryPoint;
+    import com.example.icecream.domain.user.auth.handler.CustomAuthenticationSuccessHandler;
+    import com.example.icecream.domain.user.auth.service.CustomUserDetailsService;
     
+    import com.example.icecream.domain.user.auth.util.JwtUtil;
     import com.fasterxml.jackson.databind.ObjectMapper;
     import lombok.RequiredArgsConstructor;
     
@@ -270,14 +282,16 @@
     @RequiredArgsConstructor
     public class SecurityConfig {
     
-        private final JwtAuthenticationFilter jwtAuthenticationFilter;
+        private final ObjectMapper objectMapper;
+        private final JwtUtil jwtUtil;
         private final CustomUserDetailsService customUserDetailService;
         private final CustomAuthenticationSuccessHandler customAuthenticationSuccessHandler;
-        private final ObjectMapper objectMapper;
+        private final CustomAuthenticationEntryPoint customAuthenticationEntryPoint;
     
         @Bean
         public SecurityFilterChain filterChain(HttpSecurity httpSecurity, AuthenticationManager authenticationManager) throws Exception {
             LoginIdAuthenticationFilter loginIdAuthenticationFilter = new LoginIdAuthenticationFilter(authenticationManager, customAuthenticationSuccessHandler, objectMapper);
+            JwtAuthenticationFilter jwtAuthenticationFilter = new JwtAuthenticationFilter(jwtUtil);
     
             return httpSecurity
                     .formLogin(AbstractHttpConfigurer::disable)
@@ -288,9 +302,11 @@
                     .authorizeHttpRequests(authorize -> authorize
                             .requestMatchers(HttpMethod.POST, "/users")
                             .permitAll()
-                            .requestMatchers("/users/check", "/auth/login", "/auth/device/login")
+                            .requestMatchers("/users/check", "/auth/login", "/auth/device/login","/auth/reissue", "/error")
                             .permitAll()
                             .anyRequest().authenticated())
+                    .exceptionHandling((exceptionConfig) ->
+                            exceptionConfig.authenticationEntryPoint(customAuthenticationEntryPoint))
                     .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
                     .addFilterAt(loginIdAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
                     .build();
