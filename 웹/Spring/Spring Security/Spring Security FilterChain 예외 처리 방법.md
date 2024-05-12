@@ -20,17 +20,24 @@
 - 예시
 
   ```java
-  public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain) throws IOException, ServletException {
-      try {
-          chain.doFilter(request, response);
-      } catch (Exception e) {
-          HttpServletResponse httpResponse = (HttpServletResponse) response;
-          httpResponse.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-          httpResponse.setContentType("application/json");
-          httpResponse.getWriter().write("{\"error\": \"Exception handled in filter: " + e.getMessage() + "\"}");
-          httpResponse.getWriter().flush();
-      }
-  }
+   @Override
+      protected void doFilterInternal(HttpServletRequest request, @NotNull HttpServletResponse response, @NotNull FilterChain filterChain) throws ServletException, IOException {
+  
+        				... 중략
+                          
+          try {
+              if (token != null && jwtutil.validateAccessToken(token)) {
+                  Authentication authentication = jwtutil.getAuthentication(token);
+                  SecurityContextHolder.getContext().setAuthentication(authentication);
+              }
+          } catch (Exception e) {
+              response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+              response.setContentType("application/json; charset=UTF-8");
+              ApiResponseDto<String> apiResponse = new ApiResponseDto<>(HttpServletResponse.SC_UNAUTHORIZED, AuthErrorCode.INVALID_TOKEN.getMessage(), null);
+              response.getWriter().write(objectMapper.writeValueAsString(apiResponse));
+              return;
+          }
+  
   ```
 
 #### (2) 인증/인가 로직 수행 후 발생한 예외 처리 

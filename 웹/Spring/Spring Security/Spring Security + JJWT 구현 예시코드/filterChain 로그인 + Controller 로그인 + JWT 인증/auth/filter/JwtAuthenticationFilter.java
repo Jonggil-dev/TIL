@@ -1,5 +1,7 @@
 package com.example.icecream.domain.user.auth.filter;
 
+import com.example.icecream.common.dto.ApiResponseDto;
+import com.example.icecream.domain.user.auth.error.AuthErrorCode;
 import com.example.icecream.domain.user.auth.util.JwtUtil;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.FilterChain;
@@ -20,6 +22,7 @@ import java.util.List;
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtUtil jwtutil;
+    private final ObjectMapper objectMapper;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, @NotNull HttpServletResponse response, @NotNull FilterChain filterChain) throws ServletException, IOException {
@@ -38,11 +41,19 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         //access_token 검증
         String token = resolveToken(request);
-
-        if (token != null && jwtutil.validateAccessToken(token)) {
-            Authentication authentication = jwtutil.getAuthentication(token);
-            SecurityContextHolder.getContext().setAuthentication(authentication);
+        try {
+            if (token != null && jwtutil.validateAccessToken(token)) {
+                Authentication authentication = jwtutil.getAuthentication(token);
+                SecurityContextHolder.getContext().setAuthentication(authentication);
+            }
+        } catch (Exception e) {
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            response.setContentType("application/json; charset=UTF-8");
+            ApiResponseDto<String> apiResponse = new ApiResponseDto<>(HttpServletResponse.SC_UNAUTHORIZED, AuthErrorCode.INVALID_TOKEN.getMessage(), null);
+            response.getWriter().write(objectMapper.writeValueAsString(apiResponse));
+            return;
         }
+
 
         filterChain.doFilter(request, response);
     }

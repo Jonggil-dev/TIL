@@ -24,16 +24,16 @@ public class AuthService {
 
     public LoginResponseDto deviceLogin(DeviceLoginRequestDto deviceLoginRequestDto) {
 
-        User user = userRepository.findByDeviceId(deviceLoginRequestDto.getDeviceId())
+        User user = userRepository.findByDeviceIdAndIsDeletedFalse(deviceLoginRequestDto.getDeviceId())
                 .orElseThrow(() -> new NotFoundException(AuthErrorCode.USER_NOT_FOUND.getMessage()));
 
         if (user.getIsParent()) {
-            if (jwtUtil.validateRefreshToken(deviceLoginRequestDto.getRefreshToken())) {
+            if (jwtUtil.validateRefreshToken(deviceLoginRequestDto.getRefreshToken(), String.valueOf(user.getId()))) {
                 List<User> children = parentChildMappingRepository.findChildrenByParentId(user.getId());
 
                 List<ChildrenResponseDto> childrenResponseDto = children.stream()
                         .map(child -> new ChildrenResponseDto(child.getId(), child.getProfileImage(), child.getUsername(), child.getPhoneNumber()))
-                         .toList();
+                        .toList();
 
                 JwtTokenDto jwtTokenDto = jwtUtil.generateTokenByController(String.valueOf(user.getId()), "ROLE_PARENT");
 

@@ -9,6 +9,7 @@ import java.util.List;
 @Builder
 public class ParentLoginResponseDto implements LoginResponseDto {
 
+    private int userId;
     private String username;
     private String loginId;
     private String phoneNumber;

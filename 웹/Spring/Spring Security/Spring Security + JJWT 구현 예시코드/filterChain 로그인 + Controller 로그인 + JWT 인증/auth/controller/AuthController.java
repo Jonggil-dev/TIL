@@ -11,6 +11,8 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -31,12 +33,11 @@ public class AuthController {
         return ApiResponseDto.success("로그인 되었습니다.", authService.deviceLogin(deviceLoginRequestDto));
     }
 
-//    @PostMapping("/logout")
-//    public ResponseEntity<?> signOut(@RequestBody @Valid RefreshTokenDto refreshTokenDto, @AuthenticationPrincipal UserDetails userDetails) {
-//        User user = UserUtil.getUserFromUserDetails(userDetails);
-//        jwtUtil.invalidateRefreshToken(user.getUserLoginId());
-//        return ResponseUtil.buildBasicResponse(HttpStatus.OK,"로그아웃 되었습니다.");
-//    }
+    @PostMapping("/logout")
+    public ResponseEntity<ApiResponseDto<String>> logout(@RequestBody @Valid RefreshTokenDto refreshTokenDto, @AuthenticationPrincipal UserDetails userDetails) {
+        jwtUtil.invalidateRefreshToken(refreshTokenDto.getRefreshToken(), userDetails.getUsername());
+        return ApiResponseDto.success("로그아웃 되었습니다.");
+    }
 
     @PostMapping("/reissue")
     public ResponseEntity<ApiResponseDto<JwtTokenDto>> reissue(@RequestBody @Valid RefreshTokenDto refreshTokenDto) {

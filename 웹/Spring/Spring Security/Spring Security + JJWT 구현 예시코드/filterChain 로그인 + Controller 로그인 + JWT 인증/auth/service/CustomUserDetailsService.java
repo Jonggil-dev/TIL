@@ -23,7 +23,7 @@ public class CustomUserDetailsService implements UserDetailsService {
 
     @Override
     public UserDetails loadUserByUsername(String loginId) throws UsernameNotFoundException {
-        return userRepository.findByLoginId(loginId)
+        return userRepository.findByLoginIdAndIsDeletedFalse(loginId)
                 .map(this::createUserDetails)
                 .orElseThrow(() -> new NotFoundException(AuthErrorCode.USER_NOT_FOUND.getMessage()));
     }

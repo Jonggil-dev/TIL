@@ -2,6 +2,7 @@ package com.example.icecream.domain.user.auth.util;
 
 import com.example.icecream.domain.user.auth.dto.JwtTokenDto;
 import com.example.icecream.domain.user.auth.error.AuthErrorCode;
+import com.example.icecream.domain.user.repository.UserRepository;
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
 
@@ -32,6 +33,7 @@ import java.util.stream.Collectors;
 @Slf4j
 public class JwtUtil {
 
+    private final UserRepository userRepository;
     @Value("${com.icecream.auth.access.secretKey}")
     private String accessSecretKey;
     @Value("${com.icecream.auth.refresh.secretKey}")
@@ -136,15 +138,29 @@ public class JwtUtil {
         }
     }
 
-    public boolean validateRefreshToken(String token) {
+    public boolean validateRefreshToken(String refreshToken, String userId) {
         try {
-            byte[] refreshSigningKey = refreshSecretKey.getBytes();
+            Claims claims = parseRefreshClaims(refreshToken);
 
-            Jwts.parserBuilder()
-                    .setSigningKey(Keys.hmacShaKeyFor(refreshSigningKey))
-                    .build()
-                    .parseClaimsJws(token);
+            if (ObjectUtils.isEmpty(userId)) {
+                userId = claims.getSubject();
+            }
+
+            String redisRefreshToken = findRefreshTokenInRedis(userId);
+            System.out.println(redisRefreshToken);
+
+            if (ObjectUtils.isEmpty(redisRefreshToken)) {
+                System.out.println("test1");
+                throw new BadCredentialsException(AuthErrorCode.NO_TOKEN_IN_REDIS.getMessage());
+            }
+            if (!redisRefreshToken.equals(refreshToken)) {
+                System.out.println("test2");
+                throw new BadCredentialsException(AuthErrorCode.NO_TOKEN_IN_REDIS.getMessage());
+            }
             return true;
+
+        } catch (BadCredentialsException e) {
+            throw e;
 
         } catch (Exception e) {
             throw new BadCredentialsException(AuthErrorCode.INVALID_TOKEN.getMessage());
@@ -152,22 +168,13 @@ public class JwtUtil {
     }
 
     public JwtTokenDto reissueToken(String refreshToken) {
-        validateRefreshToken(refreshToken);
 
+        validateRefreshToken(refreshToken, null);
         Claims claims = parseRefreshClaims(refreshToken);
-        String userId = claims.getSubject();
+
         String authority = claims.get("authority", String.class);
 
-        String redisRefreshToken = findRefreshTokenInRedis(userId);
-
-        if (ObjectUtils.isEmpty(redisRefreshToken)) {
-            throw new BadCredentialsException(AuthErrorCode.NO_TOKEN_IN_REDIS.getMessage());
-        }
-        if (!redisRefreshToken.equals(refreshToken)) {
-            throw new BadCredentialsException(AuthErrorCode.NO_TOKEN_IN_REDIS.getMessage());
-        }
-
-        return generateTokenByController(userId,authority);
+        return generateTokenByController(claims.getSubject(),authority);
     }
 
     private Claims parseAccessClaims(String accessToken) {
@@ -207,7 +214,8 @@ public class JwtUtil {
         return valueOperations.get("refreshToken:" + userId);
     }
 
-    public void invalidateRefreshToken(String userId) {
+    public void invalidateRefreshToken(String refreshToken, String userId) {
+        validateRefreshToken(refreshToken, userId);
         redisTemplate.delete("refreshToken:" + userId);
     }
 }

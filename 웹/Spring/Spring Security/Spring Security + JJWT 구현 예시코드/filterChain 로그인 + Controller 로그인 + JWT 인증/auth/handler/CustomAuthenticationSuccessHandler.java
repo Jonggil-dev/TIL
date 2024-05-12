@@ -37,7 +37,7 @@ public class CustomAuthenticationSuccessHandler implements AuthenticationSuccess
     public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response,
                                         Authentication authentication) throws IOException {
 
-        User user = userRepository.findByLoginId(authentication.getName()).orElseThrow(() -> new IllegalArgumentException("존재하지 않는 유저 입니다."));
+        User user = userRepository.findByLoginIdAndIsDeletedFalse(authentication.getName()).orElseThrow(() -> new IllegalArgumentException("존재하지 않는 유저 입니다."));
         List<User> children = parentChildMappingRepository.findChildrenByParentId(user.getId());
 
         List<ChildrenResponseDto> childrenResponseDto = children.stream()
@@ -60,6 +60,7 @@ public class CustomAuthenticationSuccessHandler implements AuthenticationSuccess
         notificationService.saveOrUpdateFcmToken(loginRequestDto);
 
         ParentLoginResponseDto parentLoginResponseDto = ParentLoginResponseDto.builder()
+                .userId(user.getId())
                 .username(user.getUsername())
                 .loginId(user.getLoginId())
                 .phoneNumber(user.getPhoneNumber())
