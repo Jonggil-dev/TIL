@@ -4,162 +4,96 @@
 - **이 때, 각 필터 내에서 작성된 조건에 따라 특정 로직을 실행하거나, 단순히 요청을 다음 필터로 넘기기 때문에 특정 요청에 대해 특정 필터만 활성화 되는것 처럼 보이는 것 뿐임**
 - **즉, 모든 요청은 필터체인에 구성된 모든 필터를 거쳐가지만, 필터를 거칠 때 각 필터에 작성된 로직에 맞게 동작하는 방식임 **
 
-### 주요 포인트:
-- **모든 필터의 실행**: 모든 요청은 필터 체인을 거치며, 각 필터는 모든 요청에 대해 각 필터에서 조건을 평가합니다.
-- **조건적 로직 실행**: 각 필터는 설정된 조건에 따라 요청을 처리하거나 다음 필터로 넘깁니다. 예를 들어, `JwtAuthenticationFilter`는 `Authorization` 헤더에 JWT 토큰이 있는지 확인하고, 토큰이 있다면 인증을 시도합니다. 토큰이 없다면, 필터는 아무런 인증 처리를 하지 않고 요청을 다음 필터로 넘길 수 있음
-
 ### 참고
 
 - ```java
-  package com.example.icecream.domain.user.auth.config;
+  // 자율 프로젝트 JwtAuthenticationFilter
   
-  import com.example.icecream.domain.user.auth.filter.JwtAuthenticationFilter;
-  import com.example.icecream.domain.user.auth.filter.LoginIdAuthenticationFilter;
-  import com.example.icecream.domain.user.auth.handler.CustomAuthenticationEntryPoint;
-  import com.example.icecream.domain.user.auth.handler.CustomAuthenticationSuccessHandler;
-  import com.example.icecream.domain.user.auth.service.CustomUserDetailsService;
-  
-  import com.example.icecream.domain.user.auth.util.JwtUtil;
-  import com.fasterxml.jackson.databind.ObjectMapper;
-  import lombok.RequiredArgsConstructor;
-  
-  import org.springframework.context.annotation.Bean;
-  import org.springframework.context.annotation.Configuration;
-  import org.springframework.http.HttpMethod;
-  import org.springframework.security.authentication.AuthenticationManager;
-  import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
-  import org.springframework.security.config.annotation.web.builders.HttpSecurity;
-  import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-  import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
-  import org.springframework.security.config.http.SessionCreationPolicy;
-  
-  import org.springframework.security.web.SecurityFilterChain;
-  import org.springframework.security.crypto.factory.PasswordEncoderFactories;
-  import org.springframework.security.crypto.password.PasswordEncoder;
-  import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-  
-  @Configuration
-  @EnableWebSecurity
   @RequiredArgsConstructor
-  public class SecurityConfig {
+  public class JwtAuthenticationFilter extends OncePerRequestFilter {
+  				...중략
+      @Override
+      protected void doFilterInternal(HttpServletRequest request, @NotNull HttpServletResponse response, @NotNull FilterChain filterChain) throws ServletException, IOException {
   
-      private final ObjectMapper objectMapper;
-      private final JwtUtil jwtUtil;
-      private final CustomUserDetailsService customUserDetailService;
-      private final CustomAuthenticationSuccessHandler customAuthenticationSuccessHandler;
-      private final CustomAuthenticationEntryPoint customAuthenticationEntryPoint;
+          //PermitAll() url에 대해서는 다음 필터로 요청을 바로 넘김
+          String requestURI = request.getRequestURI();
+          List<String> skipUrls = List.of("/api/users/check", "/api/auth/login", "/api/auth/device/login", "/api/auth/reissue", "/api/error");
+          boolean skip = skipUrls.stream().anyMatch(requestURI::equals);
+          if ("/api/users".equals(requestURI) && "POST".equalsIgnoreCase(request.getMethod())) {
+              skip = true;
+          }
+          if (skip) {
+              filterChain.doFilter(request, response);
+              return;
+          }
   
-      @Bean
-      public SecurityFilterChain filterChain(HttpSecurity httpSecurity, AuthenticationManager authenticationManager) throws Exception {
-          LoginIdAuthenticationFilter loginIdAuthenticationFilter = new LoginIdAuthenticationFilter(authenticationManager, customAuthenticationSuccessHandler, objectMapper);
-          JwtAuthenticationFilter jwtAuthenticationFilter = new JwtAuthenticationFilter(jwtUtil);
+          //access_token 검증
+          String token = resolveToken(request);
+          try {
+              if (token != null && jwtutil.validateAccessToken(token)) {
+                  Authentication authentication = jwtutil.getAuthentication(token);
+                  SecurityContextHolder.getContext().setAuthentication(authentication);
+              }
+          } catch (Exception e) {
+              response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+              response.setContentType("application/json; charset=UTF-8");
+              ApiResponseDto<String> apiResponse = new ApiResponseDto<>(HttpServletResponse.SC_UNAUTHORIZED, AuthErrorCode.INVALID_TOKEN.getMessage(), null);
+              response.getWriter().write(objectMapper.writeValueAsString(apiResponse));
+              return;
+          }
   
-          return httpSecurity
-                  .formLogin(AbstractHttpConfigurer::disable)
-                  .httpBasic(AbstractHttpConfigurer::disable)
-                  .csrf(AbstractHttpConfigurer::disable)
-                  .sessionManagement(management ->
-                          management.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                  .authorizeHttpRequests(authorize -> authorize
-                          .requestMatchers(HttpMethod.POST, "/users")
-                          .permitAll()
-                          .requestMatchers("/users/check", "/auth/login", "/auth/device/login","/auth/reissue", "/error")
-                          .permitAll()
-                          .anyRequest().authenticated())
-                  .exceptionHandling((exceptionConfig) ->
-                          exceptionConfig.authenticationEntryPoint(customAuthenticationEntryPoint))
-                  .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
-                  .addFilterAt(loginIdAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
-                  .build();
+  
+          filterChain.doFilter(request, response);
       }
   
-      @Bean
-      public PasswordEncoder passwordEncoder() {
-          return PasswordEncoderFactories.createDelegatingPasswordEncoder();
-      }
+      private String resolveToken(HttpServletRequest request) {
+              String bearerToken = request.getHeader("Authorization");
   
-      @Bean
-      public AuthenticationManager authenticationManager(HttpSecurity http) throws Exception {
-          AuthenticationManagerBuilder authManagerBuilder =  http.getSharedObject(AuthenticationManagerBuilder.class);
-          authManagerBuilder.userDetailsService(customUserDetailService)
-                  .passwordEncoder(passwordEncoder());
-          return authManagerBuilder.build();
+              if (StringUtils.hasText(bearerToken) && bearerToken.startsWith("Bearer")) {
+                  return bearerToken.substring(7);
+              }
+  
+              return null;
       }
   }
   ```
   
-  - **위 코드에서 `chain.doFilter`의 역할이 다음 필터체인으로 요청과 응답을 넘긴다는 의미임**
+  - **위 코드에서 `filterChain.doFilter`의 역할이 다음 필터체인으로 요청과 응답을 넘긴다는 의미임**
   
-  - `JwtAuthenticationFilter`는 `SecurityConfig`에서 `UsernamePasswordAuthenticationFilter`의 앞에 설정되어 있어서 결국 `chain.doFilter`는 `UsernamePasswordAuthenticationFilter`로 넘기겠다는 소리임
+  - `JwtAuthenticationFilter`는 `SecurityConfig`에서 `UsernamePasswordAuthenticationFilter`의 앞에 설정되어 있어서 결국 `filterChain.doFilter`는 `UsernamePasswordAuthenticationFilter`로 넘기겠다는 소리임
   
   
   
 - ```java
-  package com.example.icecream.domain.user.auth.service;
-  
-  import com.example.icecream.domain.user.auth.error.AuthErrorCode;
-  import com.example.icecream.domain.user.auth.util.JwtUtil;
-  import com.example.icecream.common.exception.NotFoundException;
-  import com.example.icecream.domain.notification.dto.LoginRequestDto;
-  import com.example.icecream.domain.notification.service.NotificationService;
-  import com.example.icecream.domain.user.entity.User;
-  import com.example.icecream.domain.user.repository.ParentChildMappingRepository;
-  import com.example.icecream.domain.user.repository.UserRepository;
-  import com.example.icecream.domain.user.auth.dto.*;
-  import lombok.RequiredArgsConstructor;
-  import org.springframework.stereotype.Service;
-  import java.util.List;
+  //특화 프로젝트 로그인 로직
   
   @Service
   @RequiredArgsConstructor
+  @Transactional(readOnly = true)
   public class AuthService {
   
       private final UserRepository userRepository;
-      private final ParentChildMappingRepository parentChildMappingRepository;
-      private final JwtUtil jwtUtil;
-      private final NotificationService notificationService;
+      private final JwtTokenProvider jwtTokenProvider;
+      private final AuthenticationManagerBuilder authenticationManagerBuilder;
   
-      public LoginResponseDto deviceLogin(DeviceLoginRequestDto deviceLoginRequestDto) {
+      @Transactional
+      public LoginResponse login(LoginRequest loginRequest) {
+          UsernamePasswordAuthenticationToken authenticationToken = new UsernamePasswordAuthenticationToken(loginRequest.getUserLoginId(), loginRequest.getUserPassword());
   
-          User user = userRepository.findByDeviceId(deviceLoginRequestDto.getDeviceId())
-                  .orElseThrow(() -> new NotFoundException(AuthErrorCode.USER_NOT_FOUND.getMessage()));
+          Authentication authentication = authenticationManagerBuilder.getObject().authenticate(authenticationToken);
   
-          if (user.getIsParent()) {
-              if (jwtUtil.validateRefreshToken(deviceLoginRequestDto.getRefreshToken())) {
-                  List<User> children = parentChildMappingRepository.findChildrenByParentId(user.getId());
+          JwtToken jwtToken = jwtTokenProvider.generateToken(authentication);
   
-                  List<ChildrenResponseDto> childrenResponseDto = children.stream()
-                          .map(child -> new ChildrenResponseDto(child.getId(), child.getProfileImage(), child.getUsername(), child.getPhoneNumber()))
-                           .toList();
+          String userLoginId = loginRequest.getUserLoginId();
+          Optional<User> userOptional  = userRepository.findByUserLoginId(userLoginId);
+          User user = userOptional.get();
   
-                  JwtTokenDto jwtTokenDto = jwtUtil.generateTokenByController(String.valueOf(user.getId()), "ROLE_PARENT");
-  
-                  LoginRequestDto loginRequestDto = new LoginRequestDto(user.getId(), deviceLoginRequestDto.getFcmToken());
-                  notificationService.saveOrUpdateFcmToken(loginRequestDto);
-  
-                  return ParentLoginResponseDto.builder()
-                          .username(user.getUsername())
-                          .loginId(user.getLoginId())
-                          .phoneNumber(user.getPhoneNumber())
-                          .profileImage(user.getProfileImage())
-                          .children(childrenResponseDto)
-                          .accessToken(jwtTokenDto.getAccessToken())
-                          .refreshToken(jwtTokenDto.getRefreshToken())
-                          .build();
-              }
-          }
-  
-          JwtTokenDto jwtTokenDto = jwtUtil.generateTokenByController(String.valueOf(user.getId()), "ROLE_CHILD");
-          LoginRequestDto loginRequestDto = new LoginRequestDto(user.getId(), deviceLoginRequestDto.getFcmToken());
-          notificationService.saveOrUpdateFcmToken(loginRequestDto);
-  
-          return ChildLoginResponseDto.builder()
-                  .userId(user.getId())
-                  .username(user.getUsername())
-                  .phoneNumber(user.getPhoneNumber())
-                  .profileImage(user.getProfileImage())
-                  .accessToken(jwtTokenDto.getAccessToken())
-                  .refreshToken(jwtTokenDto.getRefreshToken())
+          return LoginResponse.builder()
+                  .userID(user.getUserId())
+                  .userLoginId(user.getUserLoginId())
+                  .userNickname(user.getUserNickname())
+                  .accessToken(jwtToken.getAccessToken())
+                  .refreshToken(jwtToken.getRefreshToken())
                   .build();
       }
   }
