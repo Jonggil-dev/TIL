@@ -122,8 +122,16 @@ pipeline {
                     /var/flutter/bin/flutter 파일을 명시적으로 작성해서 flutter 명령어 사용 
                     */
                     
+                    /*
+                    Git 설정을 추가하여 /var/flutter 디렉토리를 안전하다고 표시 하는 작업
+					아래 명령어 안하면,   Git 소유권 문제로 인해 최신 git 커밋 날짜를 찾지 못해 VersionCheckError 발생함
+					(Git 2.35.2 버전 이후로, 안전 검사를 추가해서 해줘야 되는 명령어임)
+                    */
+                    sh 'git config --global --add safe.directory /var/flutter'
+                        
                     // Flutter 종속성 가져오기
                     sh '/var/flutter/bin/flutter pub get'
+                        
                     // APK 빌드
                     sh '/var/flutter/bin/flutter build apk'
                 	}
