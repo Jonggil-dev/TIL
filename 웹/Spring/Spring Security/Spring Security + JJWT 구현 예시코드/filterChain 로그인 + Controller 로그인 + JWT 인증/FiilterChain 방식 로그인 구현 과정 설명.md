@@ -13,15 +13,17 @@
   3. **`CustomAuthenticationSuccessHandler` 작성**
      - `CustomUsernamePasswordAuthenticationFilter`에서 인증이 성공 했을 때의 처리를 담당
      - 즉, 로그인 인증이 성공 하고 이후의 로직이나 응답을 커스텀 할 수 있는 곳
-  4. **`CustomUsernamePasswordAuthenticationFilter`에 `CustomUserDetailsService, CustomAuthenticationSuccessHandler`를 등록**
+  4. **`CustomAccessDeniedHandler` 작성**
+     - `CustomUsernamePasswordAuthenticationFilter`에서 인증이 성공하고 나면, `FilterSecurityInterceptor`에서 사용자가 요청한 리소스에 접근할 수 있는 권한이 있는지 확인하는 로직이 이루어짐
+     - 권한 확인에 실패하면, `CustomAccessDeniedHandler`의 `handle()`를 호출
+     - 즉, 로그인 인증 성공 후 권한 확인 실패 시의 로직이나 응답을 커스텀 할 수 있는 곳
+  5. **`CustomUsernamePasswordAuthenticationFilter`에 `CustomUserDetailsService, CustomAuthenticationSuccessHandler`, `CustomAccessDeniedHandler`를 등록**
      - `CustomUserDetailsService`의 경우 `authenticationManager`에 `CustomUserDetailsService`를 등록하고 해당 `authenticationManager`를 `CustomUsernamePasswordAuthenticationFilter`에 등록하는 방식임
-
        - 더 자세하게는 `CustomUsernamePasswordAuthenticationFilter`의 부모 클래스인 `UsernamePasswordAuthenticationFilter`에 `authenticationManager`를 등록해서 `CustomUserDetailsService`를 사용함
-
+       
      - `CustomAuthenticationSuccessHandler`의 경우 `CustomUsernamePasswordAuthenticationFilter`의 부모 클래스인 `UsernamePasswordAuthenticationFilter`에 등록하여 `CustomUsernamePasswordAuthenticationFilter`에서 사용함
        - `CustomUsernamePasswordAuthenticationFilter`에서 인증이 성공적으로 이루어질 경우 `successfulAuthentication()`메서드가 실행되는데 해당 메서드에서 `CustomAuthenticationSuccessHandler`를 호출하여 로그인 인증 이후의 커스텀 로직을 처리하는 방식임
-
-  5. 참고
+  6. 참고
      - **실제 인증을 진행하는 방법을 변경하고 싶으면(ex. `request`의 `deviceId`와 DB에 등록된 유저의 `deviceId`를 비교해서 인증 수행 등) `AuthenticationProvider`를 커스텀 해서 `AuthenticationManger`에 등록해야됨**
      - 4번 까지가 로그인 인증을 구성하는 방법이고, 이후 Jwt 토큰을 검증하는 로직을 구성하고 싶으면 `JwtAuthenticatinFilter`를 생성하고 `filterChain`에 등록 하면 됨
 
@@ -243,17 +245,60 @@
     }
     ```
   
+  - **`CustomAccessDeniedHandler`**
+  
+    - `onAuthenticationSuccess()`를 실행하여 인증 성공 후, `FilterSecurityInterceptor`에서 사용자가 요청한 리소스에 접근할 수 있는 권한이 있는지 확인 함
+  
+    - 접근 권한이 없을 경우 `AccessDeniedHandler`의 `handle()` 이 호출
+    
+    ```java
+    package com.example.icecream.domain.user.auth.handler;
+    
+    import com.example.icecream.common.dto.ApiResponseDto;
+    import com.example.icecream.domain.user.auth.error.AuthErrorCode;
+    import com.fasterxml.jackson.databind.ObjectMapper;
+    import lombok.RequiredArgsConstructor;
+    import org.springframework.security.access.AccessDeniedException;
+    import org.springframework.security.web.access.AccessDeniedHandler;
+    import org.springframework.stereotype.Component;
+    import jakarta.servlet.http.HttpServletRequest;
+    import jakarta.servlet.http.HttpServletResponse;
+    import java.io.IOException;
+    
+    @Component
+    @RequiredArgsConstructor
+    public class CustomAccessDeniedHandler implements AccessDeniedHandler {
+    
+        private final ObjectMapper objectMapper;
+    
+        @Override
+        public void handle(HttpServletRequest request, HttpServletResponse response, AccessDeniedException accessDeniedException) throws IOException {
+            response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+            response.setContentType("application/json; charset=UTF-8");
+            ApiResponseDto<String> apiResponse = new ApiResponseDto<>(HttpServletResponse.SC_FORBIDDEN, AuthErrorCode.ACCESS_DENIED.getMessage(), null);
+            response.getWriter().write(objectMapper.writeValueAsString(apiResponse));
+        }
+    }
+    
+    ```
+    
+    
+    
   - **`SecurityConfig`**
   
-    - `filterChain`에 커스텀한 필터들을 등록 
+    - `filterChain`에 커스텀한 필터, 핸들러들을 등록 
     - `CustomUserDetailsService`을 사용하도록 `authenticationManager`에 `CustomUserDetailsService`을 설정
     - 로그인 인증 과정에서 DB에 저장된 password 해싱 값과 비교하기 위해 request의 `password`를 해싱하는 과정이 필요함. 이 때 필요한 `passwordEncoder` 설정
+    - 유저 권한별 접근 API 제한(ROLE_PARNET, ROLE_CHILD)
   
     ```java
     package com.example.icecream.domain.user.auth.config;
     
+    import com.example.icecream.common.logging.CorrelationIdFilter;
+    import com.example.icecream.common.logging.LoggingFilter;
     import com.example.icecream.domain.user.auth.filter.JwtAuthenticationFilter;
     import com.example.icecream.domain.user.auth.filter.LoginIdAuthenticationFilter;
+    import com.example.icecream.domain.user.auth.handler.CustomAccessDeniedHandler;
     import com.example.icecream.domain.user.auth.handler.CustomAuthenticationEntryPoint;
     import com.example.icecream.domain.user.auth.handler.CustomAuthenticationSuccessHandler;
     import com.example.icecream.domain.user.auth.service.CustomUserDetailsService;
@@ -287,11 +332,14 @@
         private final CustomUserDetailsService customUserDetailService;
         private final CustomAuthenticationSuccessHandler customAuthenticationSuccessHandler;
         private final CustomAuthenticationEntryPoint customAuthenticationEntryPoint;
+        private final CustomAccessDeniedHandler customAccessDeniedHandler;
+        private final LoggingFilter loggingFilter;
+        private final CorrelationIdFilter correlationIdFilter;
     
         @Bean
         public SecurityFilterChain filterChain(HttpSecurity httpSecurity, AuthenticationManager authenticationManager) throws Exception {
             LoginIdAuthenticationFilter loginIdAuthenticationFilter = new LoginIdAuthenticationFilter(authenticationManager, customAuthenticationSuccessHandler, objectMapper);
-            JwtAuthenticationFilter jwtAuthenticationFilter = new JwtAuthenticationFilter(jwtUtil);
+            JwtAuthenticationFilter jwtAuthenticationFilter = new JwtAuthenticationFilter(jwtUtil, objectMapper);
     
             return httpSecurity
                     .formLogin(AbstractHttpConfigurer::disable)
@@ -300,13 +348,16 @@
                     .sessionManagement(management ->
                             management.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                     .authorizeHttpRequests(authorize -> authorize
-                            .requestMatchers(HttpMethod.POST, "/users")
-                            .permitAll()
-                            .requestMatchers("/users/check", "/auth/login", "/auth/device/login","/auth/reissue", "/error")
-                            .permitAll()
-                            .anyRequest().authenticated())
+                            .requestMatchers(HttpMethod.POST, "/users").permitAll()
+                            .requestMatchers("/users/check", "/auth/login", "/auth/device/login","/auth/reissue", "/error").permitAll()
+                            .requestMatchers(HttpMethod.GET, "/api/destination", "/api/goal", "/api/goal/status").hasRole("CHILD")
+                            .anyRequest().hasRole("PARENT"))
                     .exceptionHandling((exceptionConfig) ->
-                            exceptionConfig.authenticationEntryPoint(customAuthenticationEntryPoint))
+                            exceptionConfig
+                                    .authenticationEntryPoint(customAuthenticationEntryPoint)
+                                    .accessDeniedHandler(customAccessDeniedHandler))
+                    .addFilterBefore(correlationIdFilter, UsernamePasswordAuthenticationFilter.class)
+                    .addFilterBefore(loggingFilter, UsernamePasswordAuthenticationFilter.class)
                     .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
                     .addFilterAt(loginIdAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
                     .build();

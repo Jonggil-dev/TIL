@@ -147,14 +147,11 @@ public class JwtUtil {
             }
 
             String redisRefreshToken = findRefreshTokenInRedis(userId);
-            System.out.println(redisRefreshToken);
 
             if (ObjectUtils.isEmpty(redisRefreshToken)) {
-                System.out.println("test1");
                 throw new BadCredentialsException(AuthErrorCode.NO_TOKEN_IN_REDIS.getMessage());
             }
             if (!redisRefreshToken.equals(refreshToken)) {
-                System.out.println("test2");
                 throw new BadCredentialsException(AuthErrorCode.NO_TOKEN_IN_REDIS.getMessage());
             }
             return true;

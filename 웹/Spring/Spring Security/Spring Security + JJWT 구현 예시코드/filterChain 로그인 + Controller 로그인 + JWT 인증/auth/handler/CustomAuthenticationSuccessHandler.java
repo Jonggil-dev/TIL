@@ -36,12 +36,16 @@ public class CustomAuthenticationSuccessHandler implements AuthenticationSuccess
     @Override
     public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response,
                                         Authentication authentication) throws IOException {
-
         User user = userRepository.findByLoginIdAndIsDeletedFalse(authentication.getName()).orElseThrow(() -> new IllegalArgumentException("존재하지 않는 유저 입니다."));
         List<User> children = parentChildMappingRepository.findChildrenByParentId(user.getId());
 
         List<ChildrenResponseDto> childrenResponseDto = children.stream()
-                .map(child -> new ChildrenResponseDto(child.getId(), child.getProfileImage(), child.getUsername(), child.getPhoneNumber()))
+                .map(child -> ChildrenResponseDto.builder()
+                        .userId(child.getId())
+                        .profileImage(child.getProfileImage())
+                        .username(child.getUsername())
+                        .phoneNumber(child.getPhoneNumber())
+                        .build())
                 .toList();
 
         JwtTokenDto jwtToken = jwtUtil.generateTokenByFilterChain(authentication, user.getId());

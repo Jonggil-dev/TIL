@@ -5,6 +5,7 @@ import com.example.icecream.domain.user.auth.util.JwtUtil;
 import com.example.icecream.common.exception.NotFoundException;
 import com.example.icecream.domain.notification.dto.LoginRequestDto;
 import com.example.icecream.domain.notification.service.NotificationService;
+import com.example.icecream.domain.user.entity.ParentChildMapping;
 import com.example.icecream.domain.user.entity.User;
 import com.example.icecream.domain.user.repository.ParentChildMappingRepository;
 import com.example.icecream.domain.user.repository.UserRepository;
@@ -32,8 +33,14 @@ public class AuthService {
                 List<User> children = parentChildMappingRepository.findChildrenByParentId(user.getId());
 
                 List<ChildrenResponseDto> childrenResponseDto = children.stream()
-                        .map(child -> new ChildrenResponseDto(child.getId(), child.getProfileImage(), child.getUsername(), child.getPhoneNumber()))
+                        .map(child -> ChildrenResponseDto.builder()
+                                .userId(child.getId())
+                                .profileImage(child.getProfileImage())
+                                .username(child.getUsername())
+                                .phoneNumber(child.getPhoneNumber())
+                                .build())
                         .toList();
+
 
                 JwtTokenDto jwtTokenDto = jwtUtil.generateTokenByController(String.valueOf(user.getId()), "ROLE_PARENT");
 
@@ -41,6 +48,7 @@ public class AuthService {
                 notificationService.saveOrUpdateFcmToken(loginRequestDto);
 
                 return ParentLoginResponseDto.builder()
+                        .userId(user.getId())
                         .username(user.getUsername())
                         .loginId(user.getLoginId())
                         .phoneNumber(user.getPhoneNumber())
@@ -56,7 +64,10 @@ public class AuthService {
         LoginRequestDto loginRequestDto = new LoginRequestDto(user.getId(), deviceLoginRequestDto.getFcmToken());
         notificationService.saveOrUpdateFcmToken(loginRequestDto);
 
+        String parentPhoneNumber = parentChildMappingRepository.findByChildId(user.getId()).getParent().getPhoneNumber();
+
         return ChildLoginResponseDto.builder()
+                .parentPhoneNumber(parentPhoneNumber)
                 .userId(user.getId())
                 .username(user.getUsername())
                 .phoneNumber(user.getPhoneNumber())
