@@ -77,3 +77,6 @@
   - `Collections.sort(List, comparator)` : Comparator를 이용하여 리스트를 정렬
     - **사용법은 1. 정리 참고**
 
+- #### `인스턴스.sort()`
+
+  - **collections.sort()와 사용법 동일한데 직접 인스턴스를 사용하므로, 매개변수에 List는 빠지고 comparator만 넣으면 됨**
