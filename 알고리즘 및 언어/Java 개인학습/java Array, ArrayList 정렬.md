@@ -21,23 +21,40 @@
   - `Comparator` 사용법
 
     - `Comparator.compare(T o1, T o2)`메서드를 람다식으로 구현해서 사용
-      - **Comparator의 반환 값에 따라서 정렬이 이루어짐**
-      - **람다식의 return 값이 양수를 반환할 경우 o1이 o2보다 크다는 의미로 뒤쪽으로 가게됨 (이것만 기억하면 사용하기 편함)**
-
-    - 예시
-
-      ````java
-      import java.util.*;
       
-      public class Main {
-          public static void main(String[] args) {
-              List<String> strings = Arrays.asList("apple", "banana", "kiwi", "cherry");
-              Collections.sort(strings, (s1, s2) -> Integer.compare(s1.length(), s2.length()));
-          }
-      }
-      ````
-
-
+      - **Comparator의 반환 값에 따라서 정렬이 이루어짐**
+      - **람다식의 return 값이 양수를 반환할 경우 o1과 o2의 위치를 바꿈**
+        **(이것만 기억하면 사용하기 편함)**
+      - 예시
+        
+        ```java
+        import java.util.*;
+        
+        public class Main {
+            public static void main(String[] args) {
+                List<String> strings = Arrays.asList("apple", "banana", "kiwi", "cherry");
+                Collections.sort(strings, (s1, s2) -> Integer.compare(s1.length(), s2.length()));
+            }
+        }
+        ```
+      
+    - **Comparator 체이닝 방식으로 구현하는게 더 쉬워 보임**
+      
+      - 예시
+      
+        ```java
+        import java.util.*;
+        
+        public class Main {
+            public static void main(String[] args) {
+                List<String> strings = Arrays.asList("apple", "banana", "kiwi", "cherry");
+                Collections.sort(strings, Comparator.comparingInt(String::length)
+                              .thenComparing(Comparator.naturalOrder()));
+            }
+        }
+        ```
+      
+        
 
 ### 2. 배열 정렬 (int[], Integer[], String[] 등)
 
