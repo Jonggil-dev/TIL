@@ -22,9 +22,10 @@
 
 ### 2. 필터 체인에서 발생한 예외 처리 방법
 
-- **유의해야 할 점은 필터체인 내에서 발생한 모든 인증/인가 예외가 `ExceptionTranslationFilter`에서 처리 되는 것은 아님. `FilterSecurityInterceptor` 에서 발생한 인증/인가 예외에 대해서만 `ExceptionTranslationFilter`에서 처리 된다는 것에 유의 ** 
-
-![Security 예외 처리](C:\Users\정종길\Desktop\Security 예외 처리.jpg)
+- **유의해야 할 점은 필터체인 내에서 발생한 모든 인증/인가 예외가 `ExceptionTranslationFilter`에서 처리 되는 것은 아님. `FilterSecurityInterceptor` 에서 발생한 인증/인가 예외에 대해서만 `ExceptionTranslationFilter`에서 처리 된다는 것에 유의**  
+  
+![Security 예외 처리](https://github.com/user-attachments/assets/61ac64bb-a193-4f1d-91c2-39c46dc42545)
+  
 
 ####  **(1) `FilterSecurityInterceptor` 에서 발생한 인증/인가 예외**
 
