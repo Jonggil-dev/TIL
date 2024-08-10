@@ -3,18 +3,17 @@
 - ### 참고자료
 
   - [SecurityConfig 클래스의 permitAll() 이 적용되지 않았던 이유](https://velog.io/@choidongkuen/Spring-Security-SecurityConfig-%ED%81%B4%EB%9E%98%EC%8A%A4%EC%9D%98-permitAll-%EC%9D%B4-%EC%A0%81%EC%9A%A9%EB%90%98%EC%A7%80-%EC%95%8A%EC%95%98%EB%8D%98-%EC%9D%B4%EC%9C%A0)
+  - **TIL -> Spring Security FilterChain 예외 처리 방법 -> 2번이랑 같이 알아야 정확히 이해가 됨**
 
 - ### PermitAll()이 적용된 url에 대한 request 처리 방식
 
-  - **permitAll() 을 적용해도, 구성된 `Spring Security` 의 필터 체인은 모두 거침**
-
-  - 다만, **모든 필터 체인을 거친 후 인증 정보가 없어도 즉, `SecurityContext` 에 `Authentication` 인증 객체가 존재하지 않거나, 필터 동작 과정 중 예외가 발생해도 해당 API 호출이 정상적으로 가능하게 하는 것이 PermitAll()의 동작 방식**임
-
-  - **위에서 말한 "필터 동작 과정 중 예외가 발생해도"라는 말은 오직 인증 및 인가 프로세스와 관련된 Spring Security 자체의 예외들에만 적용되는 말임. 즉,  명시적으로 발생시킨 예외(예: `new throw RuntimeException()`)는 `permitAll()` 설정의 영향을 받지 않음**
-
-  - **정리하면, permitAll() 적용 시 필터 체인 동작 과정에서 Spring Security 자체 적인 인증/인가 예외 (명시적으로 발생시킨 예외는 제외) 가 발생해도 ExceptionTranslationFilter 을 거치지 않으며, 인증 객체 존재 여부 상관 없이 정상적으로 API 호출이 이루어짐.**
-
-    > **필터 동작 과정 중 예외가 발생하는 경우**:
-    >
-    > 1. **일반적인 상황**: Spring Security의 필터 체인에서 어떤 필터가 예외를 발생시키면, 이 예외는 보통 `ExceptionTranslationFilter`에 의해 캐치되고 적절히 처리됩니다. 예외의 종류에 따라 인증 실패 페이지로 리다이렉션되거나, 401(Unauthorized) 또는 403(Forbidden) 같은 상태 코드가 반환될 수 있습니다.
-    > 2. **`permitAll()`이 적용된 경우**: `permitAll()`이 설정된 경로에 대해선, 필터 체인은 예외가 발생하더라도 그 예외를 무시하고 요청을 계속 처리합니다. 이는 `ExceptionTranslationFilter`가 활성화되지 않기 때문입니다. 즉, 인증 실패 등의 보안 예외가 발생하더라도 이를 무시하고 요청이 정상적으로 처리됩니다. 사용자는 인증되지 않은 상태로 API를 호출할 수 있습니다.
+  - **permitAll() 을 적용해도, 구성된 `Spring Security` 의 필터 체인은 모두 겨처가긴 함 (필터에 작성된 로직에 따라 그냥 다음 필터로 넘어가거나 로직이 수행 됨)**
+  - 그렇게, 필터 체인을 모두 거치고 필터 체인의 마지막 필터인 `FilterSecurityInterceptor`에서 인증 및 인가를 처리 로직을 수행함. **이 때 `FilterSecurityInterceptor`에서 URI가 `permitAll() request `인지를 확인함** 
+  - 이 때 `FilterSecurityInterceptor`에서는 적절하지 않은 인증/인가에 대해 `ExceptionTranslationFilter`로 예외를 던져 처리하는데, **`permitAll() request`의 경우 인증/인가 예외에 대해 `ExceptionTranslationFilter` 가 개입하지 않고 정상적으로 API 호출이 이루어지도록 동작하는거임**
+  - 다른 말로, `SecurityContext` 에 `Authentication` 인증 객체가 존재하지 않더라도 `permitAll() request `라면 정상적으로 넘어 간다는 뜻
+  - 위에서 말한  `FilterSecurityInterceptor`에서 던지는 인증/인가 예외는 `AuthenticationException` 과 `AccessDeniedException`만 해당함
+  - **반대로 말하면 위의 동작 과정에서 어긋나는 로직이 있는경우는 `permitAll()`과 상관없이 클라이언트에게 에러가 반환됨**
+    - 예시
+      - 필터체인 내  `FilterSecurityInterceptor`가 아닌 곳에서 발생하는 인증/인가 에러 
+        (해당 에러를 `dofilter()`로 catch하여 `FilterSecurityInterceptor`에서 처리 되도록 구성해 놓았다면 괜찮음)
+      - 필터체인 내 `AuthenticationException`, `AccessDeniedException`가 아닌 예외를 명시적으로 발생시키는 경우 `throw new XXXException`을 사용한 경우

@@ -24,8 +24,9 @@
 
 - **유의해야 할 점은 필터체인 내에서 발생한 모든 인증/인가 예외가 `ExceptionTranslationFilter`에서 처리 되는 것은 아님. `FilterSecurityInterceptor` 에서 발생한 인증/인가 예외에 대해서만 `ExceptionTranslationFilter`에서 처리 된다는 것에 유의**  
   
+
 ![Security 예외 처리](https://github.com/user-attachments/assets/61ac64bb-a193-4f1d-91c2-39c46dc42545)
-  
+
 
 ####  **(1) `FilterSecurityInterceptor` 에서 발생한 인증/인가 예외**
 
@@ -42,9 +43,13 @@
 
 #### **(2) `FilterSecurityInterceptor`가 아닌 다른 필터에서 발생한 예외**
 
-- 기본적으로 예외는 `throw`를 통해 상위 스택으로만 전파 되므로, `ExceptionTranslationFilter`보다 앞쪽에 위치한 Filter에서 발생한 인증/인가 예외에 대해서는 `ExceptionTranslationFilter`로 전파 되지 않음
-- 결과적으로, **(1) 해당 예외가 발생하는 필터에서 직접 예외 처리 코드를 구성**해 놓아야 함. 아니면 **(2) throw 된 예외를 상위 스택에서 핸들링 할 수 있도록 코드를 구성**해 놓아야함 
-  - 예시로 `UsernamePasswordAuthenticationFilter` 의 로직 수행 중에 `AuthenticationException` 서브 클래스 예외가 발생한다면, 해당 에러는 `ExceptionTranslationFilter`에서 처리 되는 것이 아님. **자신의 내부 로직에서 이 예외를 처리하거나, 스프링의 기본 예외 처리 메커니즘에 의해 처리되는 것임**
+- **기본적으로 예외는 `throw`를 통해 상위 스택으로만 전파 되므로, `ExceptionTranslationFilter`보다 앞쪽에 위치한 Filter에서 발생한 인증/인가 예외에 대해서는 `ExceptionTranslationFilter`로 전파 되지 않음**
+- 결과적으로 `FilterSecurityInterceptor` 외부에서 발생한 예외에 대해서는
+  - **`try - catch` 를 이용해 예외 발생시에도 `dofilter()` 메서드를 사용해 다음 filter로 동작을 넘겨버리는 방법**
+    - 적절한 인증/인가 로직이 수행되지 않은 상태로 `dofilter()`를 통해`FilterSecurityInterceptor`까지 도달하게 되면 결국 `FilterSecurityInterceptor`에서 인증/인가 예외가 발생할 것이고 `ExceptionTranslationFilter`에 의해 처리 되도록 유도하는 방법
+    - 예시) `JwtAuthenticationFilter` 의 토큰 검증 로직 수행에서 발생하는 예외를 catch로 잡아서 그냥 `dofilter()`를  진행 시킴. 그러면 SecurityContext에 정상적인 인증 객체가 등록이 되지 않을 것이고 결국 `FilterSecurityInterceptor`에서 인증/인가 예외가 발생하여 `ExceptionTranslationFilter` 를 통해 처리 되거나 `permitAll() request`라면 `ExceptionTranslationFilter`의 개입 없이 정상적으로 `Controller`로 요청이 전파 됨
+  - **예외가 발생하는 필터에서 직접 예외를 처리하는 코드를 구성**
+    - 예시) `UsernamePasswordAuthenticationFilter` 의 로직 수행 중에 `AuthenticationException` 서브 클래스 예외가 발생한다면, 해당 에러는 `ExceptionTranslationFilter`에서 처리 되는 것이 아님. **자신의 내부 로직에서 이 예외를 처리하거나, 스프링의 기본 예외 처리 메커니즘에 의해 처리되는 것임**
 
 
 
@@ -130,7 +135,3 @@
         }
     }
     ```
-
-#### (3) 전역 예외 처리기 사용
-
-전역 예외 처리기를 사용하려면, 필터의 예외를 스프링 컨텍스트가 인식할 수 있도록 설정해야 함. 이를 위해 `DelegatingFilterProxy`를 사용하여 필터를 스프링 관리 빈으로 등록하고, 필터에서 발생한 예외를 스프링의 예외 처리 메커니즘으로 전달할 수 있습니다. 하지만 이 방법은 보통 필터의 설정과 구현에 따라 제한적일 수 있으며, 복잡한 설정이 필요할 수 있음
