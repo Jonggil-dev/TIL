@@ -16,7 +16,7 @@
      - 예: `HSET user1 name Alice`
 
 4. **세트에 값 추가**
-   - `SADD key member`
+   - `ADD key member`
      - 예: `SADD myset apple`
 
 ### 데이터 조회

@@ -22,8 +22,10 @@
 
 ### 2. 필터 체인에서 발생한 예외 처리 방법
 
-- **유의해야 할 점은 필터체인 내에서 발생한 모든 인증/인가 예외가 `ExceptionTranslationFilter`에서 처리 되는 것은 아님. `FilterSecurityInterceptor` 에서 발생한 인증/인가 예외에 대해서만 `ExceptionTranslationFilter`에서 처리 된다는 것에 유의**  
-  
+- **유의해야 할 점은 필터체인 내에서 발생한 모든 인증/인가 예외가 `ExceptionTranslationFilter`에서 처리 되는 것은 아님. `FilterSecurityInterceptor` 에서 발생한 인증/인가 예외에 대해서만 `ExceptionTranslationFilter`에서 처리 된다는 것에 유의**
+- **그 중 하나가 `AuthenticationFilter`의 예외를 직접 담당하는 것은 `AuthenticationFailureHandler`임**
+  - `AuthenticationFilter` 로직 중에서 발생한 예외를 직접 처리하는 핸들러 (ex. 비밀번호 불일치 등) 
+- **`ExceptionTranslationFilter`는 request가 필터 체인의 마지막에 위치한 `FilterSecurityInterceptor`에 도달하고 해당 필터에서 인증/인가 여부를 검사하는 과정에서 발생한 인증/인가 예외를 처리하는 것이라 생각하면 됨**
 
 ![Security 예외 처리](https://github.com/user-attachments/assets/61ac64bb-a193-4f1d-91c2-39c46dc42545)
 
