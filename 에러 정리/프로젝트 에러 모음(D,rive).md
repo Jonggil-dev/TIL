@@ -58,3 +58,23 @@
   - 로그를 분석해보면, 두 가지 경우 모두 에러가 발생하고 /error로 톰캣에서 리다이렉션이 수행됨
   - 401의 경우 FilterChain 내에서 해당 예외를 처리하는 곳이 어딘가 있어서 그대로 /error 리다이렉션이 진행이 된거고,
   - 400의 경우 FilterChain 내에서 해당 예외를 처리하는 곳이 없어서 500에러로 승격되고 그 상태로 /error 로 리다이렉션이 진행된 것으로 추측함
+
+
+
+### 5. 인텔리제이 Build 시 .jar 파일 실행 에러
+
+- 인텔리제이로 `Project Settings -> Artifacts -> + -> jar ->  From modules with ...` 누르고 MainClass 지정한 뒤 `상단 탭 -> Build -> Build Artifact` 를 실행해서 나온 .jar 파일을 사용하면 자꾸 `no main manifest attribute` 에러가 발생함
+  - 인터넷에 있는 해결방법 전부 시도해봤는데 해결이 안됨
+- 결과적으로 jar 파일 내부에는 jar 파일에 대한 메타데이터를 포함하는 `Manifest` 파일이라는 것이 있음 . 이 파일은 JAR 파일을 실행할 때 어떻게 동작할지를 정의하는 정보를 제공 해줌.
+- 그런데 위의 `no main manifest attribute` 는 해당 `Manifest`파일에 Main 클래스에 대한 정보가 누락되어서 발생하는 오류임. 실제 jar파일 내부의 `MANIFEST.MF` 을 열어보면 Main-Class 에 대한 정보가 없음. 그냥 인텔리제이 버그 같음
+- 그래서 인텔리제이 말고 터미널 명령어 `./gradlew build` 를 통해 gradle로 빌드를 하니까 해당 에러 해결됨 -> `/build/lib` 폴더에 jar파일 생성됨
+
+
+
+### 6. Nginx http -> https redircetions 시 에러
+
+- Nginx config에 80 포트에 대해 `return 301 https://$host$request_uri;` 을 하여 443 포트로 redirection 을 설정해 놓았음
+- 그런데 POST 요청으로 `http://도메인/api/users/teacher` 요청을 보냈는데 응답이 401에러가 자꾸 발생
+  (해당 요청은 permitall() URL)
+- request를 추적해 보니 POST `http://도메인/api/users/teacher`가  GET `https://도메인/api/users/teacher`로 redirect 되고 있었음
+- GPT에 물어보니까 `return 301`은 표준이 GET 요청으로 리다이렉트 하는거라 `return 307 or 308`을 사용하면 기존의 Http method를 유지한 상태로 redirect 가능 -> 설정하니까 해결됨
