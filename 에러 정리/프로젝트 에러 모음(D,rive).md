@@ -78,3 +78,53 @@
   (해당 요청은 permitall() URL)
 - request를 추적해 보니 POST `http://도메인/api/users/teacher`가  GET `https://도메인/api/users/teacher`로 redirect 되고 있었음
 - GPT에 물어보니까 `return 301`은 표준이 GET 요청으로 리다이렉트 하는거라 `return 307 or 308`을 사용하면 기존의 Http method를 유지한 상태로 redirect 가능 -> 설정하니까 해결됨
+
+
+
+### 7. transactionManager 충돌 에러
+
+- 기본적으로 JPA의 `@transactional`은 `PlatformTransactionManager`를 사용하고 RDBMS에만 적용됨
+
+- MongoDB도 트렌젝션을 추가 하기 위해 별도의 `MongoTransactionManager`를 Bean으로 등록 함
+
+- 그런데 `@Transactional`을 사용하는 메서드에서 transactionManger 충돌 에러가 발생함
+
+- `@Transactional` 에서 `TransactionManager`가 2개라 JPA 입장에서 어떤 거를 사용해야 될 지 모르겠다는 뜻
+
+- ```java
+  @Configuration
+  public class BeanConfig {
+  
+      @Bean
+      @Primary
+      public PlatformTransactionManager transactionManager(EntityManagerFactory entityManagerFactory) {
+          return new JpaTransactionManager(entityManagerFactory);
+      }
+  
+      @Bean
+      public MongoTransactionManager mongoTransactionManager(MongoDatabaseFactory dbFactory) {
+          return new MongoTransactionManager(dbFactory);
+      }
+  
+  }
+  ```
+
+  이렇게 `PlatformTransactionManager`에 `@Primary`를 추가하여 기본적으로 `@Transactional` 어노테이션에서는 `PlatformTransactionManager`를 우선 사용하도록 설정
+
+- `MongoTransactionManager`가 필요한 부분에서는 해당 `MongoTransactionManager`타입을 명시적으로 세팅해서 사용하는 방법으로 해결 함
+
+  ```java
+   public class CarScheduleService {
+   	private final MongoTransactionManager mongoTransactionManager;
+  
+      public void saveCarSchedule(int userId, CarScheduleListRequestDto carScheduleListRequestDto) {
+  	TransactionTemplate transactionTemplate = new TransactionTemplate(mongoTransactionManager);
+  	transactionTemplate.execute(status -> {
+              for (VehicleRequestDto vehicleDto : vehicles) {
+              ...
+  	}
+  
+  ```
+
+  
+
