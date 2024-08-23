@@ -128,3 +128,24 @@
 
   
 
+### 8. AWS에서의 Spring - Postgres 연결 문제 ( spring.jpa.hibernate.dialect + localhost 문제)
+
+- AWS 상황 1 (문제 없이 정상 동작)
+  - **Spring 서버 : .jar 파일 실행 (도커 컨테이너 X)**
+  - DB(Postgres, Redis, MongoDB) : 도커 컨테이너 실행
+  - Spring properties 설정
+    - spring.jpa.hibernate.dialect 설정 X
+    - postgres 주소 설정
+      -  spring.datasource.url : jdbc:postgresql://localhost:5432/drive?currentSchema=sidepjt
+    - Redis 주소 설정
+      - spring.data.redis.host : localhost
+- 문제
+  - **Spring 서버를 도커 이미지로 만들어 컨테이너로 실행하려고 하니**
+    1. hibernate.dialect를 찾지 못했다는 에러 발생 
+       - **properties에 spring.jpa.hibernate.dialect 설정 추가하여 해결**
+    2. Postgres와 Redis의 연결에 실패했다는 에러 발생
+       - **DB 주소를 localhost에서 도메인으로 바꾸어 해결**
+- 정리
+  - **.jar 파일을 aws에서 실행할 때는 도커가 아니므로 localhost 환경이 aws 서버 자체가 해당 됨**
+  - **하지만, AWS 환경에서 도커 컨테이너로 실행할 경우에는 localhost 환경이 도커 컨테이너 내부에만 적용됨**
+  - **즉, Spring 서버 입장에서 Spring 컨테이너 내부가 localhost 이므로 다른 DB와의 연결을 위해서는 AWS의 도메인으로 주소를 설정해서 연결 해야 됨**
