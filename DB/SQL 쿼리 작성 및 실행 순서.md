@@ -15,3 +15,14 @@
   STEP 1. 테이블 **인식** : FROM
   STEP 2. 테이블 **구조** : JOIN ON -> WHERE -> GROUP BY -> HAVING (⭐중요)
   STEP 3. 테이블 **조회** : SELECT -> DISTINCT -> ORDER BY -> LIMIT
+
+
+
+### 3. SELECT alias 적용 범위
+
+- **GROUP BY, HAVING, ORDER BY에서 SELECT의 alias를 사용할 수 있다.**
+  - GROUP BY가 SELECT 보다 먼저 실행 되지만, SELECT의 alias를 사용할 수 있다.
+    (DBMS가 알아서 해줌. mysql 기준)
+
+- **WHERE절에서는 SELECT의 alias를 사용할 수 없다. 실제 컬럼명만 사용 가능하다.**
+  - 간접적인 방법은 있다. (서브쿼리 등)
