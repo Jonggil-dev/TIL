@@ -16,7 +16,25 @@
   STEP 2. 테이블 **구조** : JOIN ON -> WHERE -> GROUP BY -> HAVING (⭐중요)
   STEP 3. 테이블 **조회** : SELECT -> DISTINCT -> ORDER BY -> LIMIT
 
+- **근데 HAVING같은 경우에는 실제 SELECT 절의 계산 후에 해당 조건을 적용하게 되는거라고 이해하고 코드를 작성하는게 고난도 문제를 풀 때 덜 햇갈림**
 
+  - 예시 -> 아래 같은 경우에  SELECT에 작성한 GRADE를 HAVING에서 참조하고 있음, HAVING이후에 SELECT가 실행된다고 생각하면 햇갈림 -> 반대로 생각하면 편함
+
+    ```SQL
+    SELECT
+        CASE
+            WHEN (SKILL_CODE & (SELECT SUM(SKILLCODES.CODE) FROM SKILLCODES WHERE 
+    		...
+        END AS GRADE,
+    FROM
+        DEVELOPERS
+    HAVING
+        GRADE IS NOT NULL
+    ORDER BY
+        GRADE ASC, 
+        ID ASC;
+    
+    ```
 
 ### 3. SELECT alias 적용 범위
 
