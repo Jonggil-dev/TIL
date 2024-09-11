@@ -64,7 +64,7 @@
   - `Arrays.sort(Array)` : 배열을 오름차순으로 정렬
   - `Arrays.sort(Array, fromIndex, toIndex)` : 정렬 범위를 인덱스로 지정해서 해당 범위를 오름차순으로 정렬함
 
-  - `Arrays.sort(Array, comparator)` : Comparator를 이용하여 배열을 정렬, **Comparator의 메서드는 인자로 객체를 사용하기 때문에 Array의 요소가 Wrapper Class (참조형 원소)로 정의 되어 있어야 사용 가능함** 
+  - `Arrays.sort(Array, comparator)` : Comparator를 이용하여 배열을 정렬, **Comparator는 인자로 객체를 사용하기 때문에 Array의 요소가 Wrapper Class (참조형 원소)로 정의 되어 있어야 사용 가능함** 
     **-> 즉 배열의 원소가 Integer(참조형)가 아니라 int(기본형)에 대해서는 Comparator를 사용하지 못함 !!**
     
     - ```java
