@@ -13,6 +13,7 @@
 
   - `Collections.sort()`로 배열을 정렬하고 싶으면 배열을 리스트로 바꿔서 써야됨 
   - `Arrays.sort()` 와 `Collections.sort()`는 사용하는 정렬 알고리즘에 차이가 있어서 시간 복잡도, 공간 복잡도에 차이가 존재함
+  - 해당 메서드들은 반환값이 없는 `void` 메소드. 즉, **새로운 정렬된 배열을 반환하지 않고 기존 배열을 직접 정렬** 
 
 - 위 방법 모두에서 정렬 조건을 정의해서 사용하고 싶으면 `Comparator`를 사용
 
@@ -61,20 +62,21 @@
 - #### `Arrays.sort()` 
 
   - `Arrays.sort(Array)` : 배열을 오름차순으로 정렬
-  - `Arrays.sort(Array,fromIndex,toIndex)` : 정렬 범위를 인덱스로 지정해서 해당 범위를 오름차순으로 정렬함
+  - `Arrays.sort(Array, fromIndex, toIndex)` : 정렬 범위를 인덱스로 지정해서 해당 범위를 오름차순으로 정렬함
 
-  - `Arrays.sort(Array, comparator)` : Comparator를 이용하여 배열을 정렬, Comparator의 메서드는 인자로 객체를 사용하기 때문에 Array의 요소가 Wrapper Class로 정의 되어 있어야 사용 가능함
-
+  - `Arrays.sort(Array, comparator)` : Comparator를 이용하여 배열을 정렬, **Comparator의 메서드는 인자로 객체를 사용하기 때문에 Array의 요소가 Wrapper Class (참조형 원소)로 정의 되어 있어야 사용 가능함** 
+    **-> 즉 배열의 원소가 Integer(참조형)가 아니라 int(기본형)에 대해서는 Comparator를 사용하지 못함 !!**
+    
     - ```java
       Integer[] intArr = new Integer[] {1,2,1,1,1};
       Arrays.sort(intArr,Comparator.naturalOrder()); // 오름차순
       Arrays.sort(intArr,Comparator.reverseOrder()); // 내림차순
       ```
-
+    
     - **Comparator를 활용해 직접 정렬 기준을 정의할 수 있음**
-
+    
       - 람다식을 활용해 Comparator를 사용한 예시
-
+    
       ```java
       Integer[] intArr = new Integer[] {1,3,2,5,4};
       // 오름차순 정렬
@@ -82,7 +84,7 @@
       // 내림차순 정렬
       Arrays.sort(intArr, (a, b) -> b - a);
       ```
-
+    
       
 
 ### 3. 리스트 정렬
