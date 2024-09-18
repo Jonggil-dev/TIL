@@ -149,3 +149,51 @@
   - **.jar 파일을 aws에서 실행할 때는 도커가 아니므로 localhost 환경이 aws 서버 자체가 해당 됨**
   - **하지만, AWS 환경에서 도커 컨테이너로 실행할 경우에는 localhost 환경이 도커 컨테이너 내부에만 적용됨**
   - **즉, Spring 서버 입장에서 Spring 컨테이너 내부가 localhost 이므로 다른 DB와의 연결을 위해서는 AWS의 도메인으로 주소를 설정해서 연결 해야 됨**
+
+
+
+### 9. 실무에서 에러시 예외처리
+
+- 평소 개발 과정에서는 예외 상황에 대해 에러를 던지며 메서드의 실행을 중단 시켰음
+
+- **하지만, 베타 테스트를 하며 실제 상황에서는** 
+
+  - **하나의 메서드에서 하나의 동작만 하거나, 핵심 동작에서 에러가 터지는 부분에 대해서는 동작을 중지하고 에러를 반환하는게 맞아보임**
+
+  - **하지만 하나의 메서드에서 여러 동작이 묶여있는 경우, 특정 동작에 대해 예외가 발생하면 뒤의 동작들이 수행이 안됨**
+    **-> 결국 상황에 맞게, 논리적인 판단 하에, 실패 시에도 에러 로그를 남기고 다음 동작으로 넘어 갈 수 있도록 구성을 해야 될 필요도 있음 (아래처럼 Runnable action 타입 사용)**
+
+    ```java
+    package com.drive.sidepjt.common.util;
+    
+    import lombok.extern.slf4j.Slf4j;
+    
+    @Slf4j
+    public class SafeActionUtils {
+        public static void safeExecute(Runnable action, String errorMessage) {
+            try {
+                action.run();
+            } catch (Exception e) {
+                log.error(errorMessage, e);
+            }
+        }
+    }
+    ```
+
+    - 예시
+      - FCM을 사용한 에러 처리 부분에서 단체 FCM 알림을 보내는 도중 한 부분에서 실패하니 뒤에 로직이 실행이 안됨
+      - 가능한 유저들에 대해서는 정상적으로 처리가 필요함  
+
+### 10. Scheduler에서 엔티티의 Lazy Loading 필드에 접근할 때 문제 
+
+- 매일 새벽 `Boarding_List`의 Base 레코드를 만들기 위한 과정에서,  `Scheduler`로 `CarScheduleStudentMapping`의 `User` 엔티티의 `getUsername`에 접근하려 했음.
+- 하지만, 스케줄러가 돌아가면서 `User` 엔티티의 `getUsername`에 접근하는 도중 에러가 발생
+- **당시 `CarScheduleStudentMapping`의 `User` 엔티티는 `Lazy Loading`을 설정해 놨었는데 이게 문제가 됨**
+  - **결론 : `Scheduler`의 메서드 별로 `@Transactional` 어노테이션 추가 하여 해결** 
+  - `@Scheduled` 메서드는 기본적으로 트랜잭션이 포함되어 있지 않기 때문에, 데이터베이스와의 세션이 유지되지 않음. 그래서 Hibernate에서 지연 로딩(Lazy Loading)을 사용하는 엔티티 필드는 실제로 접근할 때 데이터베이스에서 조회하는데, 트랜잭션이 없으면 데이터베이스 세션이 종료된 상태이므로, 지연 로딩 시 `LazyInitializationException`이 발생합니다.
+  - 그런데 여기서, `Service `계층에서 `Lazy Loading` 엔티티의 필드에 접근할 때는 해당 문제가 없었음
+    - 지피티 답변
+      - Spring 애플리케이션에서 요청이 들어오면, Spring Data JPA는 자동으로 데이터베이스와의 세션을 열어, 엔티티를 로드하고 그 상태를 유지할 수 있습니다. 세션이 열려 있는 동안에는 지연 로딩이 가능한 상태가 되며, 트랜잭션이 없더라도 엔티티는 조회할 수 있습니다. -> **즉, Service에서는 JPA 가 자동으로 데이터 베이스 세션을 열어줌**
+      - 이 때 데이터 베이스 세션과 트랜젝션이랑은 다른 개념임
+        - **@Transactional이 없을 때**: 데이터베이스 세션은 열릴 수 있지만, 트랜잭션은 시작되지 않습니다. 따라서 엔티티 조회는 가능하지만, 에러 발생 시 자동 롤백이 되지 않고 수동으로 처리해야 합니다.
+        - **@Transactional이 있을 때**: 트랜잭션이 활성화되고, 에러가 발생하면 자동으로 롤백됩니다.
