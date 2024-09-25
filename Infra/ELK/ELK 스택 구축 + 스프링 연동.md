@@ -11,6 +11,12 @@
 #### **(1) Spring Boot Application에서 로그를 수집**
 
 -  logback 기능을 활용하여 console에 찍히는 로그들을 파일로 백업
+-  Spring Boot는 `src/main/resources` 폴더에 위치는 해당 경로에 있는 `logback.xml` 파일을 자동으로 로드함
+  -  대신 파일명이 `logback.xml` 이나 `logback-spring.xml`이어야 함
+  -  다른 파일명으로 사용할 거면 경로를 명시적으로 설정 해주어야 함
+  
+
+- `logback.xml`
 
   ```xml
   <?xml version="1.0" encoding="UTF-8" ?>
@@ -43,12 +49,6 @@
               <appender-ref ref="FILE" />
           </root>
       </springProfile>
-  <!--    <springProfile name="dev|stg">-->
-  <!--        <root level="INFO">-->
-  <!--            <appender-ref ref="CONSOLE" />-->
-  <!--            <appender-ref ref="FILE" />-->
-  <!--        </root>-->
-  <!--    </springProfile>-->
       <springProfile name="prod">
           <root level="INFO">
               <appender-ref ref="CONSOLE" />
