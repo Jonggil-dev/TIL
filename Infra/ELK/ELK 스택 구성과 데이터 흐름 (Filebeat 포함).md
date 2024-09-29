@@ -6,7 +6,9 @@
 
    - Logstash가 무겁고 설정이 복잡하다는 단점을 보완하기 위해 등장
    - **Spring 애플리케이션 내에 탑재되어 사용되는게 아니라, 로그 파일을 대상으로 동작하는 거임** 
-     -> 즉, Spring에서 logback 라이브러리를 통해 log파일을 생성하게 되면, Filebeat는 해당 파일을 읽어서 Logstash나 Elasticsearch로 전송함
+     - 즉, Spring에서 logback 라이브러리를 통해 log파일에 로그를 기록
+       (원하는 로그가 출력/기록 되도록 Spring에서 작업이 필요함)
+     - Filebeat는 해당 파일을 읽어서 Logstash나 Elasticsearch로 전송함
 
 2. **Logstash**: 
 
