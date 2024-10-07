@@ -25,7 +25,7 @@
 
 ### **2. ELK 설정 (Docker)**
 
-- #### **깃허브 docker-elk 레포지토리 클론해서 일부 수정**
+- #### **깃허브 docker-elk 레포지토리 클론해서 수정 및 사용**
 
 - #### ElasticSearch
 
@@ -51,7 +51,6 @@
   
          
   
-
 - #### LogStash
 
   1. **`pipeline/logstash.conf 수정`**
@@ -93,73 +92,86 @@
 
 
 
-- #### FileBeat 설정
+- #### FileBeat (기존에 있는 /extensions/filebeat 수정해서 사용)
 
-  1. **docker-compose.yml에 filebeat 추가**
+  1. **`/{repository}/extensions/filebeat`를 `/{repository}/filebeat` 로 이동**
 
+  2. **docker-compose.yml에 filebeat 추가 **
+  
+     - **/filebeat 디렉토리 안에 있는 compose.yml 파일 복붙 및 수정**
+       - 디렉토리 구분 
+         - A : Spring 로그 파일을 남겨둘 호스트 환경 디렉토리 
+         - B : Spring 컨테이너 내부에서 생성되는 log 파일 디렉토리 
+         - C : filebeat 컨테이너 내부에서 호스트 Spring 로그 파일에 접근하기 위한 디렉토리
+       - 볼륨 마운팅을 아래와 같이 진행
+         - A : B -> A : C
+         - 이렇게 해야 B에서 생성된 로그가 A에 저장되고 A에 저장된 로그를 C 에서 읽을 수 있음
+  
      ```yml
-      filebeat:
+       filebeat:
          container_name: filebeat
          build:
            context: filebeat/
            args:
-             ELK_VERSION: ${ELASTIC_VERSION}
+             ELASTIC_VERSION: ${ELASTIC_VERSION}
+         user: root
+         command:
+           - -e
+           - --strict.perms=false
          volumes:
-           # - Spring 로그가 있는 홈 디렉토리 경로 :/var/logs/spring_logs:ro
-           - ./filebeat/filebeat.yml:/usr/share/filebeat/filebeat.yml:ro
+           - /c/Users/정종길/Desktop/sidepjt/log:/var/logs/spring_logs:ro
+           - ./filebeat/config/filebeat.yml:/usr/share/filebeat/filebeat.yml:ro,Z
+           - type: bind
+             source: /var/lib/docker/containers
+             target: /var/lib/docker/containers
+             read_only: true
+           - type: bind
+             source: /var/run/docker.sock
+             target: /var/run/docker.sock
+             read_only: true
+         environment:
+           FILEBEAT_INTERNAL_PASSWORD: ${FILEBEAT_INTERNAL_PASSWORD:-}
+           BEATS_SYSTEM_PASSWORD: ${BEATS_SYSTEM_PASSWORD:-}
          networks:
            - elk
          depends_on:
            - logstash
-         #아래 command 설정 안하면 filebeat.yml에 자꾸 권한 관련 에러 떠서 적용함
-         command: ["filebeat", "-e", "-strict.perms=false"]
      ```
-
   
-
-  2. **filebeat 디렉토리 만들기**
-
-     - **filebeat.yml 작성**
-
-       - 수집할 로그 파일이 있는 경로 작성 방법(yml의 path 부분)
-         1. 디렉토리 구분 
-            - A : 로그 파일을 남겨둘 홈 디렉토리 
-            - B : Spring 컨테이너에서 생성되는 log 파일의 디렉토리 
-            - C : filebeat 컨테이너에서 로그 파일에 접근하기 위한 디렉토리
-         2. 볼륨 마운팅을 아래와 같이 진행
-            - A : B -> A : C
-            - 이렇게 해야 B에서 생성된 로그가 A에 저장되고 A에 저장된 로그를 C 에서 읽을 수 있음
-
-       ```yml
-       filebeat.inputs:
-         - type: log
-           enabled: true
-          
-           # 수집할 로그 파일이 있는 경로 (위의 A에 해당하는 디렉토리)
-           paths:
-             - /var/logs/spring_logs/*.log
-             
-       output.logstash:
-         hosts: ["logstash:5044"]
-       
-       ```
-
-
-
-
-  3. **Dockerfile 작성**
-
+  
+  
+  3. **`/config/filebeat.yml` 작성**
+  
+     - paths : 수집할 로그 파일 경로 작성 
+  
+     ```yml
+     name: filebeat
+     
+     filebeat.inputs:
+       - type: log
+         enabled: true
+         paths:
+           - /var/logs/spring_logs/*.log
+     
+     output.logstash:
+       hosts: ["logstash:5044"]
+     
+     
+     http:
+       enabled: true
+       host: 0.0.0.0
+     ```
+  
+     
+  
+  4. **Dockerfile 작성**
+  
+     -  기존 `/extensions/filebeat` 에 있는 거 사용
+  
      ```dockerfile
-     ARG ELK_VERSION
-      
-     FROM docker.elastic.co/beats/filebeat:${ELK_VERSION}
-      
-     COPY filebeat.yml /usr/share/filebeat/filebeat.yml
-     USER root
-      
-     RUN mkdir /var/logs
-      
-     RUN chown -R root /usr/share/filebeat
+     ARG ELASTIC_VERSION
+     
+     FROM docker.elastic.co/beats/filebeat:${ELASTIC_VERSION:-8.15.1}
      ```
 
 
