@@ -7,16 +7,20 @@
 
 ---
 
-### 
+
 
 ### **1. Spring Boot Application에서 로그 수집**
 
 -  **`LoggingFilter로 request, response 로그 수집하기` TIL 참고**
--  logback 기능을 활용하여 console에 찍히는 로그들을 파일로 백업
+-  `logback` 기능을 활용하여 로그를 파일에 기록
+
+   -  **[주의 !] 콘솔과 파일에 출력되는 로그는 독립적으로 동작하는 거임**
+      -  로그를 남기려면 `logger.info` 같은 로거 호출이 필요하지만, 이 로그가 콘솔에 출력될지, 파일에 기록될지는 Appender 설정에 따라 다름
+      -  처음에 콘솔에 출력되는 로그가 파일로 백업되는 원리인 줄 알았음
 -  Spring Boot는 `src/main/resources` 폴더에 위치는 해당 경로에 있는 `logback.xml` 파일을 자동으로 로드함
   -  대신 파일명이 `logback.xml` 이나 `logback-spring.xml`이어야 함
   -  다른 파일명으로 사용할 거면 경로를 명시적으로 설정 해주어야 함
-  
+
   
 
 ### **2. ELK 설정 (Docker)**
@@ -28,25 +32,25 @@
   1. **클러스터 통신 관련 에러로 컨테이너 실행이 안됨 -> single node로 수정**
 
      - 추후 필요 시 node 추가하면서 클러스터 구축하기
-
-
+     
      - `elasticserach.yml`에 아래 코드 추가
-    
+     
        ```yml
        # 노드 1개만 사용하겠다는 뜻 (discovery 없음)
        discovery.type: single-node
        ```
-
-  2. **한국어 처리를 위한 플러그인 반영****
-
-     -  `Elasticsearch Dockerfile`에 아래 코드 추가
-
-       ```dockerfile
-       # 한국어 처리를 위한 필수 플러그인
-       RUN elasticsearch-plugin install analysis-icu
-       ```
-
-       
+  
+    2. **한국어 처리를 위한 플러그인 반영**
+  
+       -  `Elasticsearch Dockerfile`에 아래 코드 추가
+  
+         ```dockerfile
+         # 한국어 처리를 위한 필수 플러그인
+         RUN elasticsearch-plugin install analysis-icu
+         ```
+  
+         
+  
 
 - #### LogStash
 
