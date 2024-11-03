@@ -1,8 +1,10 @@
 # Spring 예외 처리(Exception) 내부 동작 과정 요약
 
-### 스프링 부트 예외 처리 과정 흐름도
 
-```
+
+### Spring 예외 처리 과정 흐름도 (최종 수정)
+
+```tex
 클라이언트 요청
      ↓
 WAS (Web Application Server)
@@ -17,77 +19,86 @@ DispatcherServlet
      ↓
 서비스 레이어에서 예외 발생
      ↓
-컨트롤러로 예외 전파
+Controller로 예외 전파
      ↓
-┌───────────────────────────────┐
-│ [예외 처리 분기]              │
-│                               │
-│ 컨트롤러에 @ExceptionHandler? │
-└──────────────┬────────────────┘
-             예             아니오
-             ↓               ↓
-예외 처리 후 응답 반환    DispatcherServlet으로 예외 전파
+DispatcherServlet으로 예외 전파
+     ↓
+DispatcherServlet에서 HandlerExceptionResolver 호출
+     ↓
+┌─────────────────────────────────────────────────────────────────────────────────────────────┐
+│ [HandlerExceptionResolver 순차 처리]              										   │
+│                                                											   │
+│ 1. ExceptionHandlerExceptionResolver          											   │
+│    - 예외가 발생한 컨트롤러의 @ExceptionHandler 탐색 											 │
+│    - 예외가 발생한 컨트롤러에 @ExceptionHandler가 없으면 @ControllerAdvice 탐색                  │
+└──────────────┬───────────────────────────────────────────────────────────────────────────────┘
+             예               아니오
+             ↓                 ↓
+예외 처리 후 응답 반환     다음 Resolver로 전파
                              ↓
-              DispatcherServlet에서 HandlerExceptionResolver 호출
-                             ↓
-            ┌───────────────────────────────┐
-            │ 전역 예외 처리기(@ControllerAdvice) 존재? │
-            └──────────────┬────────────────┘
-                         예             아니오
-                         ↓               ↓
-              전역 예외 처리 후 응답 반환     WAS로 예외 전파
-                                             ↓
-                               ┌───────────────────────────────┐
-                               │ WAS에서 /error 경로로 리다이렉트 │
-                               └──────────────┬────────────────┘
-                                             ↓
-                         [다시 요청 처리 흐름 시작]  
-                               ↓
-                      필터 → DispatcherServlet → 인터셉터
-                               ↓
-                        /error 엔드포인트 매핑
-                               ↓
-                        BasicErrorController 호출
-                               ↓
-                   기본 에러 응답 생성 (JSON, HTML 등)
-                               ↓
-                            HTTP 응답 반환
+                     ┌───────────────────────────────────────────────┐
+                     │ 2. ResponseStatusExceptionResolver	           │
+                     │    - @ResponseStatus 또는                      │
+                     │      ResponseStatusException 확인              │
+                     └──────────────┬────────────────────────────────┘
+                                   예                               아니오
+                                   ↓                                  ↓
+        `response.sendError(상태 코드)` 호출                    DefaultHandlerExceptionResolver 호출
+      	 /error로 리다이렉트 및               		 					 ↓
+         `BasicErrorController`에서 처리         			┌───────────────────────────────────────┐
+                                                            │ 3. DefaultHandlerExceptionResolver    │
+                                                            │    - Spring의 기본 예외 처리          │
+                                                            │      (예: TypeMismatchException)      │
+                                                            └──────────────┬────────────────────────┘
+                                                                         예                    아니오
+                                                                         ↓                      ↓
+                `response.sendError(상태 코드)` 호출    		     		↓				WAS로 예외 전파
+                /error로 리다이렉트 및						←--------------				   			↓
+               `BasicErrorController`에서 처리                                                        
+                                                                       ┌───────────────────────────────────┐
+                                                                       │ WAS에서 /error 경로로 리다이렉트 │
+                                                                       └──────────────┬────────────────────┘
+                                                                                      ↓
+                                                                       [다시 요청 처리 흐름 시작]  
+                                                                                      ↓
+                                                                           필터 → DispatcherServlet  
+                                                                                      ↓
+                                                                           /error 엔드포인트 매핑
+                                                                                      ↓
+                                                                           BasicErrorController 호출
+                                                                                      ↓
+                                                                      기본 에러 응답 생성 (JSON, HTML 등)
+                                                                                      ↓
+                                                                                   HTTP 응답 반환
+
 ```
 
 ---
 
-### **설명**
+### 각 단계의 설명
 
-1. **클라이언트 요청 → WAS → 필터 체인**  
-   - 클라이언트 요청이 WAS에 도달하고, 요청은 **필터 체인**을 통과합니다. 필터는 요청을 가로채어 인증, 로깅 등의 작업을 할 수 있습니다.
-
-2. **DispatcherServlet → 인터셉터 전처리**  
-   - 필터를 통과한 요청은 **DispatcherServlet**에 도달하고, **인터셉터**의 전처리(`preHandle`)가 실행됩니다.
-
-3. **컨트롤러 호출 → 서비스 레이어에서 예외 발생**  
-   - **컨트롤러 메서드**가 호출되고, 서비스 레이어에서 **예외가 발생**합니다. 예외가 발생하면 상위로 전파됩니다.
-
-4. **컨트롤러로 예외 전파 → 예외 처리 분기**  
-   - 예외가 **컨트롤러**로 전파됩니다.
-   - 컨트롤러 내부에 **`@ExceptionHandler`**가 있으면 예외를 처리하고 응답을 반환합니다.
-   - **`@ExceptionHandler`가 없으면**, 예외는 **DispatcherServlet**으로 전파됩니다.
-
-5. **DispatcherServlet에서 `HandlerExceptionResolver` 호출**  
-   - DispatcherServlet은 예외를 처리할 **`HandlerExceptionResolver`**를 호출하여, 예외 처리기를 탐색합니다.
-
-6. **전역 예외 처리 분기 (`@ControllerAdvice`)**  
-   - **[케이스 2-1]** 전역 예외 처리기(`@ControllerAdvice`)가 있으면 이를 통해 예외를 처리합니다.
-   - **[케이스 2-2]** 전역 예외 처리기가 없으면 예외는 **WAS**로 전파됩니다.
-
-7. **WAS에서 `/error` 경로로 리다이렉트**  
-   - WAS는 예외가 처리되지 않았을 때 **`/error` 경로로 리다이렉트**하여 에러 처리를 시도합니다.
-
-8. **리다이렉트 후 다시 요청 흐름 시작**  
-   - **필터 → DispatcherServlet → 인터셉터**를 다시 거쳐 요청이 처리됩니다.  
-   - `/error` 엔드포인트는 **BasicErrorController**로 매핑되어 호출됩니다.
-
-9. **BasicErrorController에서 기본 에러 응답 생성**  
-   - **BasicErrorController**는 기본 에러 응답(JSON, HTML 등)을 생성합니다.
-
-10. **HTTP 응답 반환**  
-   - 에러 응답이 최종적으로 **클라이언트에 반환**됩니다.
+1. **클라이언트 요청 → WAS → 필터  -> DispatcherServlet → 인터셉터 → 컨트롤러 메서드 호출→  Service 로직 수행**
+   - 클라이언트 요청이 컨트롤러에 매핑되고 Service 로직이 수행
+3. **Service 계층 예외 발생 → 컨트롤러 → DispatcherServlet으로 예외 전파**  
+   - 서비스 계층에서 예외가 발생하면 `DispatcherServlet`으로 예외 전파
+4. **DispatcherServlet에서 HandlerExceptionResolver 순차 탐색 및 예외 처리**
+   - `DispatcherServlet`은 `HandlerExceptionResolver`들을 호출하여 아래의 순서로 예외를 처리할 수 있는지 탐색
+     1. **ExceptionHandlerExceptionResolver**
+        - **해당 컨트롤러에 정의된 `@ExceptionHandler`를 우선적으로 탐색**하여 예외를 처리
+        - **컨트롤러 내에 예외 처리기가 없으면, 전역 예외 처리기인 `@ControllerAdvice`에 정의된 `@ExceptionHandler`를 탐색**
+     2. **ResponseStatusExceptionResolver**
+        - `ExceptionHandlerExceptionResolver`에서도 예외 처리가 이루어지지 않은 경우, **`@ResponseStatus`가 붙은 예외나 `ResponseStatusException`을 감지하여 아래와 같이 처리 함**
+          - 예외가 감지되면, **`response.sendError(상태 코드)` 메서드를 호출**하여 응답에 지정된 HTTP 상태 코드를 설정
+          - `sendError()`가 호출되면 서블릿 컨테이너의 오류 처리 로직인 `/error`로 리다이렉트 및 `BasicErrorController`에 매핑되어 처리
+          - **해당 과정의 `/error` 리다이렉트는`DispatcherServlet`에서 수행 (WAS까지 안감)**
+     3. **DefaultHandlerExceptionResolver**
+        - `ResponseStatusExceptionResolver`에서도 예외 처리가 되지 않으면, `DefaultHandlerExceptionResolver`가 Spring의 표준 예외를 처리
+          - `HttpRequestMethodNotSupportedException` → 405 Method Not Allowed
+          - `TypeMismatchException` → 400 Bad Request
+          - 등등
+        - `ExceptionHandlerExceptionResolver`와 마찬가지로, 이 과정에서도  `sendError()` 호출 및 서블릿 컨테이너의 오류 처리 로직인 `/error`로 리다이렉트 및 `BasicErrorController`에 매핑되어 처리
+        - **해당 과정의 `/error` 리다이렉트도`DispatcherServlet`에서 수행 (WAS까지 안감)**
+5. **WAS로 예외 전파 및 `/error` 경로 리다이렉트**  
+   - `HandlerExceptionResolver`의 모든 예외 처리기를 통해서도 처리되지 않은 예외는 WAS로 전파되며, WAS는 `/error` 경로로 요청을 리다이렉트
+6. **BasicErrorController에서 최종 에러 응답 생성 및 반환**  
+   - `/error` 경로는 `BasicErrorController`에 매핑되어, 기본 에러 응답을 생성하고 최종적으로 클라이언트에게 반환
